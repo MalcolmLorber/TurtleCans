@@ -6,6 +6,8 @@ Begin with handshake between Bank and ATM - share public keys, make unique key f
 All messages have (increasing number / next number from cryptostream) attached to them to prevent replay
 
 if any bad message detected, kill connnection
+
+Sign messages with hash to detect tampering
 ###Handshake
 ###Message content
 ###Error Handling
