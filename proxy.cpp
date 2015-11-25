@@ -3,7 +3,7 @@ Name: Samuel Wenninger, Brandon Drumheller, and Malcolm Lorber
 Date Created: 11-10-2015
 Filename: proxy.cpp
 Description: Proxy program that only transports data to and from the bank
-             program using the Boost libarary. Compile using the following:
+             program using the Boost library. Compile using the following:
              "g++ -std=c++11 proxy.cpp -lboost_system"
 *******************************************************************************/
 
