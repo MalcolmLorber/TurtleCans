@@ -9,12 +9,48 @@ Description: Proxy program that only transports data to and from the bank
 
 #include<iostream>
 #include<string>
+#include<regex>
+#include<vector>
 #include<memory> //may not need
 #include<utility> // may not need
 #include<boost/asio.hpp>
 
 using boost::asio::ip::tcp;
 
+
+//these should essentially all do the same thing
+//may not need multiple functions
+void login(){
+}
+void balance(){}
+void withdraw(){}
+void transfer(){}
+void logout(){
+    std::cout << "Session terminated" << std::endl; 
+}
+
+void ProcessCommand(std::string command){
+    // TODO: consider setting limit to username
+    // Use regex to check for valid command
+    std::vector<std::regex> ValidCommands = {std::regex("^login\\[.+\\]$"), std::regex("^balance$"), std::regex("^withdraw\\[.+\\]$"), std::regex("^transfer\\[.+\\]\\[.+\\]$"), std::regex("^logout$")}; 
+    bool matched = false;
+
+    for (unsigned int i =0; i < ValidCommands.size(); ++i){
+        if (std::regex_match(command, ValidCommands[i])){
+            matched=true;
+            break;
+        }
+    }
+    if (!matched){
+        std::cerr << "INVALID COMMAND" << std::endl;
+        return;
+    }
+    if(command.find("login") == 0)          login(); 
+    else if (command == "balance")          balance();
+    else if(command.find("withdraw") == 0)  withdraw();
+    else if (command.find("transfer") == 0) transfer();
+    else if (command == "logout")           logout();
+}
 
 enum {max_length = 1024};
 
@@ -34,24 +70,26 @@ int main(int argc, char** argv){
         
         tcp::socket s(io_service);
         boost::asio::connect(s, iterator);
-        
-        //login, balance, withdraw, transfer, logout
-        std::cout << "Enter command" ;
-        // consider changing this vulnerable??
-        
-        char request[max_length];
-        std::cin.getline(request, max_length);
+       
+        while (true){
+            //login, balance, withdraw, transfer, logout
+            std::cout << "Enter command: " ;
+            // consider changing this vulnerable??
+            
+            char request[max_length];
+            std::cin.getline(request, max_length);
 
-        
+            ProcessCommand(request);
+            
+            size_t request_length = strlen(request); //AVOID THIS
+            boost::asio::write(s, boost::asio::buffer(request,request_length));
 
-        size_t request_length = strlen(request); //AVOID THIS
-        boost::asio::write(s, boost::asio::buffer(request,request_length));
-
-        char reply[max_length];
-        size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
-        std::cout << "REPLY";
-        std::cout.write(reply, reply_length);
-        std::cout << '\n';           
+            char reply[max_length];
+            size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
+            std::cout << "REPLY: ";
+            std::cout.write(reply, reply_length);
+            std::cout << '\n';           
+        }
     }
     catch (std::exception & e){
         std::cerr << "Exception: " << e.what() << std::endl;

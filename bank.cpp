@@ -15,6 +15,16 @@ Description: Bank server that services requests from the ATM
 
 using boost::asio::ip::tcp;
 
+class User{
+    public:
+       User(std::string name, long long balance): name(name), balance(balance){}         
+    private:
+        std::string name;
+        long long balance;
+        unsigned int pin;
+};
+
+
 /*******************************************************************************
  @DESC: The Session class is responsible for reading from the ATM socket and
         to the Bank socket.
@@ -35,6 +45,10 @@ class Session : public std::enable_shared_from_this<Session> {
             bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
             [this, Self](boost::system::error_code EC, std::size_t Length) {
                 if (!EC) {
+                    //instead of directly writing, perform the correct operation
+                    if(std::string(data_).find("login") == 0){
+                      sprintf(data_, "successful write to socket");                 
+                    }            
                     DoWrite(Length);
                 }
             });
