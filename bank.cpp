@@ -4,13 +4,14 @@ Date Created: 11-25-2015
 Filename: bank.cpp
 Description: Bank server that services requests from the ATM 
              using the Boost library. Compile using the following:
-             "g++ -std=c++11 proxy.cpp -lboost_system"
+             g++ -std=c++11 bank.cpp -lboost_system -lboost_thread -o bank.out 
 *******************************************************************************/
 
 #include <iostream>
 #include <string>
 //#include <memory>
 //#include <utility>
+#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 
 using boost::asio::ip::tcp;
@@ -68,8 +69,8 @@ class Session : public std::enable_shared_from_this<Session> {
         //Max length of messages passed through the proxy
         enum {max_length = 1024};
         //Array to hold the incoming message
-        //char data_[max_length];
-        string data_;
+        char data_[max_length];
+        //string data_;
 };
 
 /*******************************************************************************
@@ -106,6 +107,15 @@ class Server {
 };
 
 
+void CommandLine() {
+    while (true) {
+        std::string Command;
+        std::cin >> Command;
+        std::cout << Command << std::endl;
+    }
+}
+
+
 /*******************************************************************************
  @DESC: Call appropriate function(s) to initiate communication between the ATM
         and the bank. 
@@ -119,6 +129,7 @@ int main (int argc, char* argv[]) {
                             " <bank-port>" << std::endl;
             return EXIT_FAILURE;
         }
+        boost::thread Thread(CommandLine);
         boost::asio::io_service IOService;
         int BankPort = std::stoi(argv[1]);
         Server S(IOService, BankPort);
