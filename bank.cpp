@@ -11,6 +11,7 @@ Description: Bank server that services requests from the ATM
 #include <string>
 //#include <memory>
 //#include <utility>
+#include <vector>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 
@@ -106,12 +107,75 @@ class Server {
         tcp::socket bank_socket_;
 };
 
+bool IsValidCommand(std::string command) {
+    if (command.substr(0,7) != "deposit" && command.substr(0,7) != "balance") {
+        return false;
+    }
+    if (command.substr(7,1) != "[") {
+        return false;
+    }
+    bool Valid = false;
+    if (command.substr(0,7) == "deposit") {
+        int Total = 1;
+        int NumPairs = 0;
+        for (int i = 8; i < command.size(); ++i ) {
+            if (command[i] == '[') {
+                ++Total; 
+            }
+            else if (command[i] == ']') {
+                --Total;    
+            }
+            if (Total == 0) {
+                ++NumPairs;
+            }
+        }
+        if (NumPairs == 2) {
+            Valid = true;
+        }
+    /*
+        std::cout << "Size: " << command.size() << std::endl;
+        if (command.size() < 11) {
+            return false;
+        }
+        bool ClosingBracket = false;
+        bool Valid = false;
+        for (int i = 8; i < command.size(); ++i) {
+            if (command[i] == ']') {
+                if (ClosingBracket) {
+                    ClosingBracket = true;
+                    if (i + 1 < command.size() || command[i+1] != '[') {
+                        return false;
+                    }
+                }
+                else {
+                    Valid = true; 
+                }
+            }
+        }
+        if (!ClosingBracket || !Valid) {
+            return false;
+        }
+    }
+    if (command.substr(0,7) == "balance") {
+        if (command.size() < 9) {
+            return false;
+        }*/
+    }
+    if (!Valid) {
+        return false;
+    }
+    return true;
+}
 
 void CommandLine() {
     while (true) {
-        std::string Command;
-        std::cin >> Command;
-        std::cout << Command << std::endl;
+        std::string command;
+        std::cin >> command;
+        bool matched = IsValidCommand(command);
+        if (!matched) {
+            std::cerr << "INVALID COMMAND" << std::endl;
+        }
+        std::cout << command << std::endl;
     }
 }
 
