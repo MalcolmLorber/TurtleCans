@@ -35,8 +35,8 @@ void ProcessCommand(std::string command){
     std::vector<std::regex> ValidCommands = {std::regex("^login\\[.+\\]$"), std::regex("^balance$"), std::regex("^withdraw\\[.+\\]$"), std::regex("^transfer\\[.+\\]\\[.+\\]$"), std::regex("^logout$")}; 
     bool matched = false;
 
-    for (unsigned int i =0; i < ValidCommands.size(); ++i){
-        if (std::regex_match(command, ValidCommands[i])){
+    for (auto &i: ValidCommands){
+        if (std::regex_match(command,i)){
             matched=true;
             break;
         }
@@ -76,15 +76,17 @@ int main(int argc, char** argv){
             std::cout << "Enter command: " ;
             // consider changing this vulnerable??
             
-            char request[max_length];
-            std::cin.getline(request, max_length);
-
+            std::string request;
+            std::getline(std::cin, request);
+            //char request[max_length];
+            //std::cin.getline(request, max_length);
+            
             ProcessCommand(request);
             
             size_t request_length = strlen(request); //AVOID THIS
             boost::asio::write(s, boost::asio::buffer(request,request_length));
 
-            char reply[max_length];
+            std::string reply;
             size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
             std::cout << "REPLY: ";
             std::cout.write(reply, reply_length);
