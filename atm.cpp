@@ -93,8 +93,8 @@ int main(int argc, char** argv){
 	    //s.receive(boost::asio::buffer(reply));
 		
 
-	    std::vector<char> data(socket_.available());
-            boost::asio::read(socket_, boost::asio::buffer(data));
+	    std::vector<char> data(s.available());
+            boost::asio::read(s, boost::asio::buffer(data));
 
 	    std::string replyStr(reply.begin(), reply.end());
             std::cout << "REPLY: " << replyStr << reply.size() << std::endl;           
