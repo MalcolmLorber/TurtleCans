@@ -11,6 +11,7 @@ Description: Bank server that services requests from the ATM
 #include <string>
 //#include <memory>
 //#include <utility>
+#include <vector>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 
@@ -106,12 +107,54 @@ class Server {
         tcp::socket bank_socket_;
 };
 
+bool IsValidCommand(std::string command) {
+    if (command.substr(0,7) != "deposit" && command.substr(0,7) != "balance") {
+        return false;
+    }
+    if (command.substr(7,1) != "[") {
+        return false;
+    }
+    bool Valid = false;
+    int Total = 1;
+    int NumPairs = 0;
+    for (int i = 8; i < command.size(); ++i ) {
+        if (command[i] == '[') {
+            ++Total; 
+        }
+        else if (command[i] == ']') {
+            --Total;    
+        }
+        if (Total == 0) {
+            ++NumPairs;
+        }
+    }
+    if (command.substr(0,7) == "deposit") {
+        if (NumPairs == 2) {
+            Valid = true;
+        }
+    }
+    else if (command.substr(0,7) == "balance") {
+        if (NumPairs == 1) {
+            Valid = true;
+        }
+    }
+    if (!Valid) {
+        return false;
+    }
+    return true;
+}
 
 void CommandLine() {
     while (true) {
-        std::string Command;
-        std::cin >> Command;
-        std::cout << Command << std::endl;
+        std::string command;
+        std::cin >> command;
+        bool matched = IsValidCommand(command);
+        if (!matched) {
+            std::cerr << "INVALID COMMAND" << std::endl;
+        }
+        else {
+            std::cout << command << std::endl;
+        }
     }
 }
 
