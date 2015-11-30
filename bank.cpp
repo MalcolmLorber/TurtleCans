@@ -47,6 +47,7 @@ class Session : public std::enable_shared_from_this<Session> {
             bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
             [this, Self](boost::system::error_code EC, std::size_t Length) {
                 if (!EC) {
+		    std::cout << "Message received: " << data_ << std::endl;
                     //instead of directly writing, perform the correct operation
                     if(std::string(data_).find("login") == 0){
                       sprintf(data_, "successful write to socket");                 
@@ -117,7 +118,7 @@ bool IsValidCommand(std::string command) {
     bool Valid = false;
     int Total = 1;
     int NumPairs = 0;
-    for (int i = 8; i < command.size(); ++i ) {
+    for (unsigned int i = 8; i < command.size(); ++i ) {
         if (command[i] == '[') {
             ++Total; 
         }

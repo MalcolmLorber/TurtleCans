@@ -88,13 +88,13 @@ int main(int argc, char** argv){
             size_t request_length = requestVec.size();
             //boost::asio::write(s, boost::asio::buffer(request,request_length));
 	    s.send(boost::asio::buffer(requestVec));	
-            std::vector<char> reply;
+            //std::vector<char> reply;
             //size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
 	    //s.receive(boost::asio::buffer(reply));
 		
 
-	    std::vector<char> data(s.available());
-            boost::asio::read(s, boost::asio::buffer(data));
+	    std::vector<char> reply(s.available());
+            boost::asio::read(s, boost::asio::buffer(reply));
 
 	    std::string replyStr(reply.begin(), reply.end());
             std::cout << "REPLY: " << replyStr << reply.size() << std::endl;           
