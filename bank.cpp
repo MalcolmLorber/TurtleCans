@@ -68,7 +68,8 @@ class Session : public std::enable_shared_from_this<Session> {
         //Max length of messages passed through the proxy
         enum {max_length = 1024};
         //Array to hold the incoming message
-        char data_[max_length];
+        //char data_[max_length];
+        string data_;
 };
 
 /*******************************************************************************
