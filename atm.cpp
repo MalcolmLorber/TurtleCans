@@ -82,15 +82,22 @@ int main(int argc, char** argv){
             //std::cin.getline(request, max_length);
             
             ProcessCommand(request);
-            
-            size_t request_length = strlen(request); //AVOID THIS
-            boost::asio::write(s, boost::asio::buffer(request,request_length));
 
-            std::string reply;
-            size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
-            std::cout << "REPLY: ";
-            std::cout.write(reply, reply_length);
-            std::cout << '\n';           
+	    std::vector<char> requestVec(request.begin(), request.end());
+            
+            size_t request_length = requestVec.size();
+            //boost::asio::write(s, boost::asio::buffer(request,request_length));
+	    s.send(boost::asio::buffer(requestVec));	
+            std::vector<char> reply;
+            //size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
+	    //s.receive(boost::asio::buffer(reply));
+		
+
+	    std::vector<char> data(socket_.available());
+            boost::asio::read(socket_, boost::asio::buffer(data));
+
+	    std::string replyStr(reply.begin(), reply.end());
+            std::cout << "REPLY: " << replyStr << reply.size() << std::endl;           
         }
     }
     catch (std::exception & e){
