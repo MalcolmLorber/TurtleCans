@@ -14,6 +14,7 @@ Description: Proxy program that only transports data to and from the bank
 #include<memory> //may not need
 #include<utility> // may not need
 #include<boost/asio.hpp>
+#include "validate.h"
 
 using boost::asio::ip::tcp;
 
@@ -30,17 +31,8 @@ void logout(){
 }
 
 void ProcessCommand(std::string command){
-    // TODO: consider setting limit to username
     // Use regex to check for valid command
-    std::vector<std::regex> ValidCommands = {std::regex("^login\\[.+\\]$"), std::regex("^balance$"), std::regex("^withdraw\\[.+\\]$"), std::regex("^transfer\\[.+\\]\\[.+\\]$"), std::regex("^logout$")}; 
-    bool matched = false;
-
-    for (auto &i: ValidCommands){
-        if (std::regex_match(command,i)){
-            matched=true;
-            break;
-        }
-    }
+    bool matched = IsValidATMCommand(command);
     if (!matched){
         std::cerr << "INVALID COMMAND" << std::endl;
         return;
