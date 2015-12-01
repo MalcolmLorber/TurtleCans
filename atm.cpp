@@ -4,7 +4,8 @@ Date Created: 11-25-2015
 Filename: proxy.cpp                                                                     
 Description: Proxy program that only transports data to and from the bank               
              program using the Boost libarary. Compile using the following:             
-             "g++ -std=c++11 proxy.cpp -lboost_system -pthread"                                  
+             g++ -std=c++11 atm.cpp -lboost_system -lboost_thread -lboost_regex
+             -pthread -o atm.out 
 *******************************************************************************/
 
 #include<iostream>
