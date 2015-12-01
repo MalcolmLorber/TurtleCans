@@ -4,7 +4,8 @@ Date Created: 11-25-2015
 Filename: bank.cpp
 Description: Bank server that services requests from the ATM 
              using the Boost library. Compile using the following:
-             g++ -std=c++11 bank.cpp -lboost_system -lboost_thread -o bank.out 
+             g++ -std=c++11 bank.cpp -lboost_system -lboost_thread -lboost_regex
+             -o bank.out 
 *******************************************************************************/
 
 #include <iostream>
