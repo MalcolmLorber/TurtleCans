@@ -12,18 +12,121 @@ Description: Bank server that services requests from the ATM
 //#include <memory>
 //#include <utility>
 #include <vector>
+#include <unordered_map>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
+#include <mutex>
 
 using boost::asio::ip::tcp;
 
 class User{
-    public:
-       User(std::string name, long long balance): name(name), balance(balance){}         
-    private:
-        std::string name;
-        long long balance;
-        unsigned int pin;
+public:
+    User(std::string name, long long balance): name(name), balance(balance){}         
+    void addMoney(long long money){balance += money;}
+    void removeMoney(long long money){balance -= money;}
+    long long getBalance(){return balance;}
+    int getPin(){return pin;}
+private:
+    std::string name;
+    long long balance;
+    int pin;
+};
+
+class Bank{
+public:
+    Bank(){}
+    bool login(std::string user, int pin){
+        data_m.lock();
+
+        if(users.count(user)!=1){
+            data_m.unlock();
+            return false;
+        }
+        if(users[user]->getPin() != pin){
+            data_m.unlock();
+            return false;
+        }
+        
+        loggedin[user]=true;
+
+        data_m.unlock();
+        return true;
+    }
+    bool balance(std::string user, long long &retBal){
+        data_m.lock();
+
+        if(!loggedin[user]){
+            data_m.unlock();
+            return false;
+        }
+        retBal = users[user]->getBalance();
+
+        data_m.unlock();
+        return true;
+    }
+    bool withdraw(std::string user, long long amount){
+        data_m.lock();
+
+        if(!loggedin[user]){
+            data_m.unlock();
+            return false;
+        }
+        if(amount<=0){
+            data_m.unlock();
+            return false;
+        }
+        if(users[user]->getBalance()<amount){
+            data_m.unlock();
+            return false;
+        }
+        users[user]->removeMoney(amount);
+
+        data_m.unlock();
+        return true;
+    }
+    bool transfer(std::string user1, std::string user2, long long amount){
+        data_m.lock();
+
+        if(!loggedin[user1]){
+            data_m.unlock();
+            return false;
+        }
+        if(users[user1]->getBalance()<amount){
+            data_m.unlock();
+            return false;
+        }
+        if(amount<=0){
+            data_m.unlock();
+            return false;
+        }
+        if(users.count(user2)!=1){
+            data_m.unlock();
+            return false;
+        }
+        
+        users[user1]->removeMoney(amount);
+        users[user2]->addMoney(amount);
+
+        data_m.unlock();
+        return true;
+    }
+    bool logout(std::string user){
+        data_m.lock();
+        
+        if(!loggedin[user]){
+            data_m.unlock();
+            return false;
+        }
+        
+        loggedin[user]=false;
+        
+        data_m.unlock();
+        return true;
+    }
+private:
+    std::unordered_map<std::string, bool> loggedin;
+    std::unordered_map<std::string, User*> users;
+    std::mutex data_m;
 };
 
 
@@ -50,7 +153,7 @@ class Session : public std::enable_shared_from_this<Session> {
 		    std::cout << "Message received: " << data_ << std::endl;
                     //instead of directly writing, perform the correct operation
                     if(std::string(data_).find("login") == 0){
-                      sprintf(data_, "successful write to socket");                 
+                        sprintf(data_, "successful write to socket");
                     }            
                     DoWrite(Length);
                 }
