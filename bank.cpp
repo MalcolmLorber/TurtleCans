@@ -14,6 +14,7 @@ Description: Bank server that services requests from the ATM
 #include <vector>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
+#include "validate.h"
 
 using boost::asio::ip::tcp;
 
@@ -108,48 +109,11 @@ class Server {
         tcp::socket bank_socket_;
 };
 
-bool IsValidCommand(std::string command) {
-    if (command.substr(0,7) != "deposit" && command.substr(0,7) != "balance") {
-        return false;
-    }
-    if (command.substr(7,1) != "[") {
-        return false;
-    }
-    bool Valid = false;
-    int Total = 1;
-    int NumPairs = 0;
-    for (unsigned int i = 8; i < command.size(); ++i ) {
-        if (command[i] == '[') {
-            ++Total; 
-        }
-        else if (command[i] == ']') {
-            --Total;    
-        }
-        if (Total == 0) {
-            ++NumPairs;
-        }
-    }
-    if (command.substr(0,7) == "deposit") {
-        if (NumPairs == 2) {
-            Valid = true;
-        }
-    }
-    else if (command.substr(0,7) == "balance") {
-        if (NumPairs == 1) {
-            Valid = true;
-        }
-    }
-    if (!Valid) {
-        return false;
-    }
-    return true;
-}
-
 void CommandLine() {
     while (true) {
         std::string command;
-        std::cin >> command;
-        bool matched = IsValidCommand(command);
+        std::getline(std::cin, command);
+        bool matched = IsValidBankCommand(command);
         if (!matched) {
             std::cerr << "INVALID COMMAND" << std::endl;
         }
