@@ -29,10 +29,10 @@ int main(int argc, char** argv) {
         tcp::resolver::query query(tcp::v4(), host, ProxyPort);
         tcp::resolver::iterator iterator = resolver.resolve(query);
         tcp::socket s(io_service);
-        boost::asio::connect(s, iterator);
-        while (true) {
-            std::string request;
-            std::getline(std::cin, request);
+        boost::asio::connect(s, iterator);        
+        std::string request;
+	while (std::getline(std::cin, request)) {
+             
             //Validate the user inputted command using regex
             if (!IsValidATMCommand(request)) {
                 std::cerr << "INVALID COMMAND" << std::endl;
