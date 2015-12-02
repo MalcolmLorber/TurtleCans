@@ -215,11 +215,13 @@ class Server {
 };
 
 void CommandLine() {
-    //p_o = segment.find<Bank>("MyInstance").first; 
-    while (true) {
-        std::string command;
-        std::getline(std::cin, command);
-        bool matched = IsValidBankCommand(command);
+    std::string command;
+    while (true){
+	if (!std::getline(std::cin, command)){
+	    std::cin.clear();
+	    continue;
+	}
+	bool matched = IsValidBankCommand(command);
         if (!matched) {
             std::cerr << "INVALID COMMAND" << std::endl;
         }

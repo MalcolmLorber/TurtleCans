@@ -1,3 +1,6 @@
+#ifndef _validate_h_
+#define _validate_h_
+
 #include <boost/regex.hpp>
 #include <vector>
 #include <string>
@@ -32,3 +35,5 @@ bool IsValidATMCommand(std::string command) {
     }
     return false;
 }
+
+#endif
