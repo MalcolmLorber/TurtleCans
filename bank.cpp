@@ -262,7 +262,15 @@ void CommandLine() {
                 std::string token1 = command.substr(space1, command.size() - space1);
                 int space2 = token1.find(" ");
                 std::string username = token1.substr(0, space2);
-                long long amount = stoll(token1.substr(space2+1, token1.size()-space2-1));               
+                long long amount = 0;
+               
+                try{
+                    amount = stoll(token1.substr(space2+1, token1.size()-space2-1));               
+                }
+                catch(std::exception & e){
+                    std::cerr << "Invalid deposit amount" << std::endl;
+                    continue; 
+                }
                if (!(bank.deposit(username, amount))){
                     std::cerr << "Unable to deposit money" << std::endl;
                     continue;
