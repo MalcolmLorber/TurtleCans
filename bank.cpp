@@ -8,164 +8,24 @@ Description: Bank server that services requests from the ATM
              -o bank.out 
 *******************************************************************************/
 
+//Standard library
 #include <iostream>
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
+//Boost
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
+//Program header files
 #include "validate.h"
-#include <mutex>
-#include "limits.h"
+#include "bank_object.h"
+#include "user.h"
+
 using boost::asio::ip::tcp;
 
-class User{
-public:
-    User(std::string name, long long balance, int pin, int id): name(name), balance(balance), pin(pin), id(id){}         
-    void addMoney(long long money){balance += money;}
-    void removeMoney(long long money){balance -= money;}
-    long long getBalance(){return balance;}
-    std::string getName(){return name;}
-    int getPin(){return pin;}
-private:
-    std::string name;
-    long long balance;
-    int pin;
-    int id;
-};
-
-class Bank{
-public:
-    Bank(std::vector<User> uVec){
-      //userVec = uVec;
-      for (unsigned int i =0; i< uVec.size(); ++i){
-        std::string uName = uVec[i].getName();
-        loggedin[uName]=false;
-        users[uName] = new User(uVec[i]);       
-      }
-    }
-    bool login(std::string user, int pin){
-        data_m.lock();
-
-        if(users.count(user)!=1){
-            data_m.unlock();
-            return false;
-        }
-        if(users[user]->getPin() != pin){
-            data_m.unlock();
-            return false;
-        }
-        
-        loggedin[user]=true;
-
-        data_m.unlock();
-        return true;
-    }
-    bool balance(std::string user, long long &retBal){
-        data_m.lock();
-
-        if(!loggedin[user]){
-            data_m.unlock();
-            return false;
-        }
-        retBal = users[user]->getBalance();
-
-        data_m.unlock();
-        return true;
-    }
-    bool adminBalance(std::string user, long long &retBal){
-        data_m.lock();
-        retBal = users[user]->getBalance();
-        data_m.unlock();
-        return true;
-    }
-    bool deposit(std::string user, long long amount){
-        data_m.lock();
-        
-        long long userBal = users[user]->getBalance();
-        
-        if (amount > LLONG_MAX - userBal){
-            data_m.unlock();
-            return false;    
-        }
-        
-        users[user]->addMoney(amount);
-        
-        data_m.unlock();
-        return true; 
-    }
-
-    bool withdraw(std::string user, long long amount){
-        data_m.lock();
-
-        if(!loggedin[user]){
-            data_m.unlock();
-            return false;
-        }
-        if(amount<=0){
-            data_m.unlock();
-            return false;
-        }
-        if(users[user]->getBalance()<amount){
-            data_m.unlock();
-            return false;
-        }
-        users[user]->removeMoney(amount);
-
-        data_m.unlock();
-        return true;
-    }
-    bool transfer(std::string user1, std::string user2, long long amount){
-        data_m.lock();
-
-        if(!loggedin[user1]){
-            data_m.unlock();
-            return false;
-        }
-        if(users[user1]->getBalance()<amount){
-            data_m.unlock();
-            return false;
-        }
-        if(amount<=0){
-            data_m.unlock();
-            return false;
-        }
-        if(users.count(user2)!=1){
-            data_m.unlock();
-            return false;
-        }
-        long long user2Bal=users[user2]->getBalance();
-        
-        if (amount > LLONG_MAX - user2Bal){
-            data_m.unlock();
-            return false;    
-        }
-        users[user1]->removeMoney(amount);        
-        users[user2]->addMoney(amount);
-
-        data_m.unlock();
-        return true;
-    }
-    bool logout(std::string user){
-        data_m.lock();
-        
-        if(!loggedin[user]){
-            data_m.unlock();
-            return false;
-        }
-        
-        loggedin[user]=false;
-        
-        data_m.unlock();
-        return true;
-    }
-private:
-    std::unordered_map<std::string, bool> loggedin;
-    std::unordered_map<std::string, User*> users;
-    std::mutex data_m;
-};
-
-Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253), User("bob", 50ll, 91842, 396175), User("eve", 0ll, 22317, 912343)}); 
+Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253),
+          User("bob", 50ll, 91842, 396175), User("eve", 0ll, 22317, 912343)}); 
 /*******************************************************************************
  @DESC: The Session class is responsible for reading from the ATM socket and
         to the Bank socket.
@@ -193,11 +53,15 @@ class Session : public std::enable_shared_from_this<Session> {
                         }
                     }
                     data_[Length] = '\0';
-		    std::cout << "Message received: " << data_ << std::endl;
-                    //instead of directly writing, perform the correct operation
-                    //if(std::string(data_).find("login") == 0){
-                    //    sprintf(data_, "successful write to socket");
-                    //}            
+                    std::string temp(data_);
+                    if (!IsValidATMCommand(temp)) {
+                        if (bank_socket_.is_open()) {
+                            bank_socket_.close();
+                            return;
+                        }
+                    }
+                    command = temp;
+		    std::cout << "Message received: " << command << std::endl;
                     DoWrite(Length);
                 }
             });
@@ -218,6 +82,7 @@ class Session : public std::enable_shared_from_this<Session> {
         enum {max_length = 1024};
         //Array to hold the incoming message
         char data_[max_length];
+        std::string command;
 };
 
 /*******************************************************************************
