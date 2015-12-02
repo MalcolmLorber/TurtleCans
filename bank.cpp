@@ -269,14 +269,16 @@ private:
 
         dhB.AccessGroupParameters().Initialize(p, q, g);
 
-        if(!dhB.GetGroupParameters().ValidateGroup(rndB, 3))
-            throw runtime_error("Failed to validate prime and generator");
+        if(!dhB.GetGroupParameters().ValidateGroup(rndB, 3)){
+	    throw runtime_error("Failed to validate prime and generator");
+	}
 
         size_t count = 0;
 
         Integer v = ModularExponentiation(g, q, p);
-        if(v != Integer::One())
-            throw runtime_error("Failed to verify order of the subgroup");
+        if(v != Integer::One()){
+	   throw runtime_error("Failed to verify order of the subgroup");
+	}
 
         //////////////////////////////////////////////////////////////
 
@@ -314,9 +316,10 @@ private:
 
         SecByteBlock sharedB(dhB.AgreedValueLength());
         
-        if(!dhB.Agree(sharedB, privB, pubA))
-            throw runtime_error("Failed to reach shared secret (B)");
-
+        if(!dhB.Agree(sharedB, privB, pubA)){
+	    throw runtime_error("Failed to reach shared secret (B)");	
+	}
+        	    
         Integer b;
 	b.Decode(sharedB.BytePtr(), sharedB.SizeInBytes());
 
@@ -363,10 +366,15 @@ class Server {
                 if (!EC) {
                         //Accept connection and start a session by calling the
                         //Session constructor
-                        std::make_shared<Session>(std::move(bank_socket_)) -> Start();
-                        }
+			try{
+                        	std::make_shared<Session>(std::move(bank_socket_)) -> Start();
+			}
+			catch(std::exception e){
+			  std::cout << "Handshake Failed" <<std::endl;                        
+			}
                         DoAccept();
-                    });
+		}	
+            });
         }
         //Bank acceptor and socket
         tcp::acceptor bank_acceptor_;
