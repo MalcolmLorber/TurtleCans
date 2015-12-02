@@ -164,10 +164,8 @@ class Session : public std::enable_shared_from_this<Session> {
                 std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
                 StringSource ss((byte*)(sdata.c_str()),sdata.size()+1,true, new Base64Decoder(new StringSink(data64dec)));
                 std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
-                //char* decryptedRequest = new char[msgsize+1];
                 std::string decryptedRequest=""; 
                 std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
-                //cfbDecryption.ProcessData((byte*)decryptedRequest,(const byte*)data64dec.c_str(),msgsize);
                 StringSource ds(data64dec, true, new StreamTransformationFilter(*cfbDecryption,new StringSink(decryptedRequest)));
                 std::cout<<"\nDec:\n"<<decryptedRequest<<std::endl;
                 

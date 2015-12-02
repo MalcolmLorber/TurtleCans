@@ -201,41 +201,13 @@ int main(int argc, char** argv) {
             }
 
             
-            /*char* enc_msg = new char[request.length()+1];
-            strcpy(enc_msg,request.c_str());
-            cfbEncryption.ProcessData((byte*)enc_msg, (byte*)enc_msg,(int)strlen(enc_msg)+1);
-            std::cout<<enc_msg<<std::endl;
-            std::string encreq;
-            StringSource ss((byte*)enc_msg,request.length()+1,true,new Base64Encoder(new StringSink(encreq)));
-            delete [] enc_msg;
-            
-            std::cout<<encreq<<std::endl;*/
-
-            //char* encryptedRequest = new char[roundUp(request.length(),16)];
             std::string encryptedRequest;
-            //cfbEncryption.ProcessData((byte*)encryptedRequest,(const byte*)request.c_str(),request.length()+1);
             StringSource es(request, true, new StreamTransformationFilter(cfbEncryption,new StringSink(encryptedRequest)));
             std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
             std::string encryptedRequest64;
-            StringSource aesEncode((byte*)encryptedRequest.c_str(),encryptedRequest.size()+1/*roundUp(request.length(),16)+2*/,true,new Base64Encoder(new StringSink(encryptedRequest64)));
+            StringSource aesEncode((byte*)encryptedRequest.c_str(),encryptedRequest.size()+1,true,new Base64Encoder(new StringSink(encryptedRequest64)));
             encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
             std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
-            
-            //delete[] encryptedRequest;
-             
-
-            std::string data64dec;
-            std::string sdata(encryptedRequest64);
-            std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
-            StringSource ss((byte*)(sdata.c_str()),sdata.size()+1,true, new Base64Decoder(new StringSink(data64dec)));
-            std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
-            //char* decryptedRequest = new char[msgsize+1];
-            std::string decryptedRequest; 
-            std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
-            //cfbDecryption.ProcessData((byte*)decryptedRequest,(const byte*)data64dec.c_str(),msgsize);
-            StringSource ds(data64dec, true, new StreamTransformationFilter(cfbDecryption,new StringSink(decryptedRequest)));
-            std::cout<<"\nDec:\n"<<decryptedRequest<<std::endl;
-
 
 
             boost::system::error_code EC;
