@@ -10,23 +10,22 @@ Description: Bank server that services requests from the ATM
 
 #include <iostream>
 #include <string>
-//#include <memory>
-//#include <utility>
 #include <vector>
 #include <unordered_map>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include "validate.h"
 #include <mutex>
-
+#include "limits.h"
 using boost::asio::ip::tcp;
 
 class User{
 public:
-    User(std::string name, long long balance): name(name), balance(balance){}         
+    User(std::string name, long long balance, int pin): name(name), balance(balance), pin(pin){}         
     void addMoney(long long money){balance += money;}
     void removeMoney(long long money){balance -= money;}
     long long getBalance(){return balance;}
+    std::string getName(){return name;}
     int getPin(){return pin;}
 private:
     std::string name;
@@ -36,7 +35,14 @@ private:
 
 class Bank{
 public:
-    Bank(){}
+    Bank(std::vector<User> uVec){
+      //userVec = uVec;
+      for (unsigned int i =0; i< uVec.size(); ++i){
+        std::string uName = uVec[i].getName();
+        loggedin[uName]=false;
+        users[uName] = new User(uVec[i]);       
+      }
+    }
     bool login(std::string user, int pin){
         data_m.lock();
 
@@ -66,6 +72,28 @@ public:
         data_m.unlock();
         return true;
     }
+    bool adminBalance(std::string user, long long &retBal){
+        data_m.lock();
+        retBal = users[user]->getBalance();
+        data_m.unlock();
+        return true;
+    }
+    bool deposit(std::string user, long long amount){
+        data_m.lock();
+        
+        long long userBal = users[user]->getBalance();
+        
+        if (amount > LLONG_MAX - userBal){
+            data_m.unlock();
+            return false;    
+        }
+        
+        users[user]->addMoney(amount);
+        
+        data_m.unlock();
+        return true; 
+    }
+
     bool withdraw(std::string user, long long amount){
         data_m.lock();
 
@@ -105,8 +133,13 @@ public:
             data_m.unlock();
             return false;
         }
+        long long user2Bal=users[user2]->getBalance();
         
-        users[user1]->removeMoney(amount);
+        if (amount > LLONG_MAX - user2Bal){
+            data_m.unlock();
+            return false;    
+        }
+        users[user1]->removeMoney(amount);        
         users[user2]->addMoney(amount);
 
         data_m.unlock();
@@ -131,7 +164,7 @@ private:
     std::mutex data_m;
 };
 
-
+Bank bank(std::vector<User> {User("alice", 100ll, 827431), User("bob", 50ll, 91842), User("eve", 0ll, 22317)}); 
 /*******************************************************************************
  @DESC: The Session class is responsible for reading from the ATM socket and
         to the Bank socket.
@@ -215,6 +248,7 @@ class Server {
 };
 
 void CommandLine() {
+    //p_o = segment.find<Bank>("MyInstance").first; 
     while (true) {
         std::string command;
         std::getline(std::cin, command);
@@ -223,7 +257,32 @@ void CommandLine() {
             std::cerr << "INVALID COMMAND" << std::endl;
         }
         else {
-            std::cout << command << std::endl;
+            if(command.find("deposit") == 0) {
+                int space1 = command.find(" ") +1;
+                std::string token1 = command.substr(space1, command.size() - space1);
+                int space2 = token1.find(" ");
+                std::string username = token1.substr(0, space2);
+                long long amount = stoll(token1.substr(space2+1, token1.size()-space2-1));               
+               if (!(bank.deposit(username, amount))){
+                    std::cerr << "Unable to deposit money" << std::endl;
+                    continue;
+                }    
+                else{
+                    std::cout << "Balance increased by $" << amount << std::endl;
+                } 
+            }
+            else if (command.find("balance") == 0){
+                int space = command.find(" ") + 1;
+                std::string username = command.substr(space, command.size() - space);
+                long long bal = 0;
+                if (!(bank.adminBalance(username, bal))){
+                    std::cerr << "Unable to retreive balance" << std::endl;
+                    continue;
+                }    
+                else{
+                    std::cout << "Balance: $" << bal << std::endl;
+                }
+            }
         }
     }
 }
