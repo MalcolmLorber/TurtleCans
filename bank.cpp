@@ -71,8 +71,12 @@ class Session : public std::enable_shared_from_this<Session> {
     public:
         Session(tcp::socket Socket1) 
             : bank_socket_(std::move(Socket1)) {
-setupenc();
-}
+            setupenc();
+        }
+    ~Session(){
+        delete cfbEncryption;
+        delete cfbDecryption;
+    }
         void Start() {
             DoRead();
         }
@@ -155,27 +159,6 @@ setupenc();
             auto Self(shared_from_this());    
             bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
             [this, Self](boost::system::error_code EC, std::size_t Length) {
-                                             //std::cout<<data_<<std::endl;
-                                             //char* enc = new char[Length];
-                                             //strcpy(enc,data_);
-                                             //int len = (Length*3)/4 +1;
-                                             //std::string decoded;
-                //StringSource ss(enc, true, new Base64Decoder(new StringSink(decoded)));
-                //std::cout<<decoded<<std::endl;
-
-                //char* enc_msg = new char[decoded.length()+1];
-                //strcpy(enc_msg,decoded.c_str());
-                //cfbDecryption.ProcessData((byte*)enc_msg,(byte*)enc_msg,len);
-                //std::cout<<enc_msg<<std::endl;
-                
-                //strcpy(data_,enc_msg);
-                                   
-                //std::string fixedlen = std::string(data_).substr(0,4);
-                //fixedlen.erase(0,fixedlen.find_first_not_of('0'));
-                //std::cout<<"\nFixed: "<<fixedlen<<std::endl;
-                //int msgsize = stoi(fixedlen);
-                //std::cout<<"\nMsgsize: "<<msgsize<<std::endl;
-                
                 std::string data64dec;
                 std::string sdata(data_);
                 std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
