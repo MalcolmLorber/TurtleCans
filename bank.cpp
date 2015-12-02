@@ -186,6 +186,12 @@ class Session : public std::enable_shared_from_this<Session> {
             bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
             [this, Self](boost::system::error_code EC, std::size_t Length) {
                 if (!EC) {
+                    if (Length > 1023) {
+                        if (bank_socket_.is_open()) {
+                            bank_socket_.close();
+                            return;
+                        }
+                    }
                     data_[Length] = '\0';
 		    std::cout << "Message received: " << data_ << std::endl;
                     //instead of directly writing, perform the correct operation
