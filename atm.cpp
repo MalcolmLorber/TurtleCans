@@ -12,6 +12,7 @@ Description: Proxy program that only transports data to and from the bank
 #include<string>
 #include<boost/asio.hpp>
 #include "validate.h"
+#include <fstream>
 
 using boost::asio::ip::tcp;
 
@@ -36,8 +37,32 @@ int main(int argc, char** argv) {
             //Validate the user inputted command using regex
             if (!IsValidATMCommand(request)) {
                 std::cerr << "INVALID COMMAND" << std::endl;
-                return EXIT_FAILURE;
+                continue;
             }
+
+            //setup login with cards
+            if (request.find("login") == 0){
+                int space = request.find(" ") +1;
+                int account = 0;
+                std::string accountStr = "";
+                std::string user = request.substr(space, request.size() - space);
+                std::cout << "USER: " << user << std::endl;
+                std::ifstream cardFile(user + ".card");
+                
+                if(cardFile.is_open()){
+                    cardFile >> account;
+                    std::stringstream ss;
+                    ss << account;
+                    accountStr = ss.str();
+                }
+                else{
+                    std::cerr << "Unable to read card file" << std::endl;
+                } 
+                cardFile.close();               
+                request = "login " + accountStr;
+                std::cout << request << std::endl; 
+            }
+
             boost::system::error_code ignored_error;
             boost::asio::write(s, boost::asio::buffer(request),
                                 boost::asio::transfer_all(), ignored_error);

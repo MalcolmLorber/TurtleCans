@@ -21,7 +21,7 @@ using boost::asio::ip::tcp;
 
 class User{
 public:
-    User(std::string name, long long balance, int pin): name(name), balance(balance), pin(pin){}         
+    User(std::string name, long long balance, int pin, int id): name(name), balance(balance), pin(pin), id(id){}         
     void addMoney(long long money){balance += money;}
     void removeMoney(long long money){balance -= money;}
     long long getBalance(){return balance;}
@@ -31,6 +31,7 @@ private:
     std::string name;
     long long balance;
     int pin;
+    int id;
 };
 
 class Bank{
@@ -164,7 +165,7 @@ private:
     std::mutex data_m;
 };
 
-Bank bank(std::vector<User> {User("alice", 100ll, 827431), User("bob", 50ll, 91842), User("eve", 0ll, 22317)}); 
+Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253), User("bob", 50ll, 91842, 396175), User("eve", 0ll, 22317, 912343)}); 
 /*******************************************************************************
  @DESC: The Session class is responsible for reading from the ATM socket and
         to the Bank socket.
