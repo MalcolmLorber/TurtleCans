@@ -161,13 +161,15 @@ class Session : public std::enable_shared_from_this<Session> {
             [this, Self](boost::system::error_code EC, std::size_t Length) {
                 std::string data64dec;
                 std::string sdata(data_);
-                std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
+                //std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
                 StringSource ss((byte*)(sdata.c_str()),sdata.size(),true, new Base64Decoder(new StringSink(data64dec)));
-                std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
+                //std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
                 std::string decryptedRequest=""; 
-                std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
+                //std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
                 StringSource ds(data64dec, true, new StreamTransformationFilter(*cfbDecryption,new StringSink(decryptedRequest)));
                 std::cout<<"\nDec:\n"<<decryptedRequest<<std::endl;
+                
+                strcpy(data_, decryptedRequest.c_str());
                 
                 if ((boost::asio::error::eof == EC) ||
                         (boost::asio::error::connection_reset == EC)) {
