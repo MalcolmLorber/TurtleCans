@@ -14,6 +14,7 @@ Description: Bank server that services requests from the ATM
 #include <vector>
 #include <unordered_map>
 #include <mutex>
+#include <algorithm>
 //Boost
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
@@ -24,7 +25,24 @@ Description: Bank server that services requests from the ATM
 #include "bank_object.h"
 #include "user.h"
 
+#include "cryptopp/osrng.h"
+#include "cryptopp/integer.h"
+#include "cryptopp/nbtheory.h"
+#include "cryptopp/dh.h"
+#include "cryptopp/secblock.h"
+#include "cryptopp/hex.h"
+#include "cryptopp/filters.h"
+#include "cryptopp/sha.h"
+#include "cryptopp/aes.h"
+#include "cryptopp/modes.h"
+#include "cryptopp/rsa.h"
+#include "cryptopp/base64.h"
+#include "cryptopp/files.h"
+
 using boost::asio::ip::tcp;
+
+using namespace CryptoPP;
+using namespace std;
 
 Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253),
           User("bob", 50ll, 918427, 396175), User("eve", 0ll, 223175, 912343)}); 
@@ -37,7 +55,9 @@ Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253),
 class Session : public std::enable_shared_from_this<Session> {
     public:
         Session(tcp::socket Socket1) 
-            : bank_socket_(std::move(Socket1)) {}
+            : bank_socket_(std::move(Socket1)) {
+setupenc();
+}
         void Start() {
             DoRead();
         }
@@ -120,6 +140,20 @@ class Session : public std::enable_shared_from_this<Session> {
             auto Self(shared_from_this());    
             bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
             [this, Self](boost::system::error_code EC, std::size_t Length) {
+                                             //std::cout<<data_<<std::endl;
+                                             //char* enc = new char[Length];
+                                             //strcpy(enc,data_);
+                                             //int len = (Length*3)/4 +1;
+                                             //std::string decoded;
+                //StringSource ss(enc, true, new Base64Decoder(new StringSink(decoded)));
+                //std::cout<<decoded<<std::endl;
+
+                //char* enc_msg = new char[decoded.length()+1];
+                //strcpy(enc_msg,decoded.c_str());
+                //cfbDecryption.ProcessData((byte*)enc_msg,(byte*)enc_msg,len);
+                //std::cout<<enc_msg<<std::endl;
+                
+                //strcpy(data_,enc_msg);
                 if ((boost::asio::error::eof == EC) ||
                         (boost::asio::error::connection_reset == EC)) {
                     Process("logout");
@@ -171,6 +205,109 @@ class Session : public std::enable_shared_from_this<Session> {
                 }
             });
         }
+    
+    CryptoPP::CFB_Mode<AES>::Encryption cfbEncryption;
+    CryptoPP::CFB_Mode<AES>::Decryption cfbDecryption;
+    void setupenc(){
+        CryptoPP::Integer p("0x87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F2\
+                          5D2CEED4435E3B00E00DF8F1D61957D4FAF7DF4561B2AA30\
+                          16C3D91134096FAA3BF4296D830E9A7C209E0C6497517ABD\
+                          5A8A9D306BCF67ED91F9E6725B4758C022E0B1EF4275BF7B\
+                          6C5BFC11D45F9088B941F54EB1E59BB8BC39A0BF12307F5C\
+                          4FDB70C581B23F76B63ACAE1CAA6B7902D52526735488A0E\
+                          F13C6D9A51BFA4AB3AD8347796524D8EF6A167B5A41825D9\
+                          67E144E5140564251CCACB83E6B486F6B3CA3F7971506026\
+                          C0B857F689962856DED4010ABD0BE621C3A3960A54E710C3\
+                          75F26375D7014103A4B54330C198AF126116D2276E11715F\
+                          693877FAD7EF09CADB094AE91E1A1597");
+        CryptoPP::Integer g("0x3FB32C9B73134D0B2E77506660EDBD484CA7B18F21EF2054\
+                          07F4793A1A0BA12510DBC15077BE463FFF4FED4AAC0BB555\
+                          BE3A6C1B0C6B47B1BC3773BF7E8C6F62901228F8C28CBB18\
+                          A55AE31341000A650196F931C77A57F2DDF463E5E9EC144B\
+                          777DE62AAAB8A8628AC376D282D6ED3864E67982428EBC83\
+                          1D14348F6F2F9193B5045AF2767164E1DFC967C1FB3F2E55\
+                          A4BD1BFFE83B9C80D052B985D182EA0ADB2A3B7313D3FE14\
+                          C8484B1E052588B9B7D2BBD2DF016199ECD06E1557CD0915\
+                          B3353BBB64E0EC377FD028370DF92B52C7891428CDC67EB6\
+                          184B523D1DB246C32F63078490F00EF8D647D148D4795451\
+                          5E2327CFEF98C582664B4C0F6CC41659");
+        CryptoPP::Integer q("0x8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F5FBD3");
+        DH dhB;
+        AutoSeededRandomPool rndB;
+
+        dhB.AccessGroupParameters().Initialize(p, q, g);
+
+        if(!dhB.GetGroupParameters().ValidateGroup(rndB, 3))
+            throw runtime_error("Failed to validate prime and generator");
+
+        size_t count = 0;
+
+        p = dhB.GetGroupParameters().GetModulus();
+        q = dhB.GetGroupParameters().GetSubgroupOrder();
+        g = dhB.GetGroupParameters().GetGenerator();
+
+        // http://groups.google.com/group/sci.crypt/browse_thread/thread/7dc7eeb04a09f0ce
+        Integer v = ModularExponentiation(g, q, p);
+        if(v != Integer::One())
+            throw runtime_error("Failed to verify order of the subgroup");
+
+        //////////////////////////////////////////////////////////////
+
+        SecByteBlock privB(dhB.PrivateKeyLength());
+        SecByteBlock pubB(dhB.PublicKeyLength());
+        dhB.GenerateKeyPair(rndB, privB, pubB);
+
+        //////////////////////////////////////////////////////////////
+        //EXCHANGE PUBLICS HERE
+        //recv(pubA)
+        boost::asio::streambuf response;
+        boost::asio::read_until(bank_socket_, response, "\0");
+        std::istream response_stream(&response);
+        std::string answer;
+        std::getline(response_stream, answer);
+        std::cout << "\nATM dh pub: \n"<<answer << std::endl;
+        //base64decode it
+        std::string pubAstr;
+        StringSource ss2(answer, true, new Base64Decoder(new StringSink(pubAstr)));
+        SecByteBlock pubA((byte*)pubAstr.data(),pubAstr.size());
+        //send(pubB)
+        std::string pubB64;
+        StringSource ss(pubB.data(),pubB.size()+1,true,new Base64Encoder(new StringSink(pubB64)));
+        pubB64.erase(std::remove(pubB64.begin(),pubB64.end(),'\n'),pubB64.end());
+        std::cout<<"\nBank dh pub: \n"<<pubB64<<std::endl;
+        boost::system::error_code EC;
+        boost::asio::write(bank_socket_, boost::asio::buffer(pubB64),
+                                boost::asio::transfer_all(), EC);
+        if ((boost::asio::error::eof == EC) ||                           
+            (boost::asio::error::connection_reset == EC)) {
+            std::cerr << "ERROR" << std::endl;
+        }
+
+        //////////////////////////////////////////////////////////////
+        //if(dhA.AgreedValueLength() != dhB.AgreedValueLength())
+        //    throw runtime_error("Shared secret size mismatch");
+
+        SecByteBlock sharedB(dhB.AgreedValueLength());
+        
+        if(!dhB.Agree(sharedB, privB, pubA))
+            throw runtime_error("Failed to reach shared secret (B)");
+
+        Integer b;
+	b.Decode(sharedB.BytePtr(), sharedB.SizeInBytes());
+        cout << "\nShared secret (B): " << std::hex << b << endl;
+        //count = std::min(dhA.AgreedValueLength(), dhB.AgreedValueLength());
+        //if(!count || 0 != memcmp(sharedA.BytePtr(), sharedB.BytePtr(), count))
+        //    throw runtime_error("Failed to reach shared secret");
+
+        int aesKeyLength = SHA256::DIGESTSIZE;
+        int defBlockSize = AES::BLOCKSIZE;
+        SecByteBlock key(SHA256::DIGESTSIZE);
+        SHA256().CalculateDigest(key, sharedB, sharedB.size());
+        byte iv[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        //rndA.GenerateBlock(iv, AES::BLOCKSIZE);
+        cfbEncryption = CryptoPP::CFB_Mode<AES>::Encryption(key, aesKeyLength, iv);
+        cfbDecryption = CryptoPP::CFB_Mode<AES>::Decryption(key, aesKeyLength, iv);
+    }
         tcp::socket bank_socket_;
         //Max length of messages passed through the proxy
         enum {max_length = 1024};
@@ -179,6 +316,7 @@ class Session : public std::enable_shared_from_this<Session> {
         long long id = 0;
         bool login = false;
         bool loggedin = false;
+    
 };
 
 /*******************************************************************************
