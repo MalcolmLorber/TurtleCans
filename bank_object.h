@@ -19,6 +19,10 @@ public:
     }
     bool login(long long id, long long pin){
         data_m.lock();
+        if(ids.count(id)!=1){
+            data_m.unlock();
+            return false;
+        }
         if(loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
@@ -39,7 +43,10 @@ public:
     }
     bool balance(long long id, long long &retBal){
         data_m.lock();
-
+        if(ids.count(id)!=1){
+            data_m.unlock();
+            return false;
+        }
         if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
@@ -51,13 +58,20 @@ public:
     }
     bool adminBalance(std::string user, long long &retBal){
         data_m.lock();
+        if(users.count(user)!=1){
+            data_m.unlock();
+            return false;
+        }
         retBal = users[user]->getBalance();
         data_m.unlock();
         return true;
     }
     bool deposit(std::string user, long long amount){
         data_m.lock();
-        
+        if(users.count(user)!=1){
+            data_m.unlock();
+            return false;
+        }
         long long userBal = users[user]->getBalance();
         
         if (amount > LLONG_MAX - userBal){
@@ -73,7 +87,10 @@ public:
 
     bool withdraw(long long id, long long amount){
         data_m.lock();
-
+        if(ids.count(id)!=1){
+            data_m.unlock();
+            return false;
+        }
         if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
@@ -93,7 +110,10 @@ public:
     }
     bool transfer(long long id, std::string user2, long long amount){
         data_m.lock();
-
+        if(ids.count(id)!=1){
+            data_m.unlock();
+            return false;
+        }
         if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
@@ -124,7 +144,10 @@ public:
     }
     bool logout(long long id){
         data_m.lock();
-        
+        if(ids.count(id)!=1){
+            data_m.unlock();
+            return false;
+        }
         if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
