@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
         std::string pubA64;
         StringSource ss(pubA.data(),pubA.size()+1,true,new Base64Encoder(new StringSink(pubA64)));
         pubA64.erase(std::remove(pubA64.begin(),pubA64.end(),'\n'), pubA64.end());
-        std::cout<<"\nATM dh pub: \n"<<pubA64<<std::endl;
+        //std::cout<<"\nATM dh pub: \n"<<pubA64<<std::endl;
         boost::system::error_code EC;
         boost::asio::write(s, boost::asio::buffer(pubA64),
                                 boost::asio::transfer_all(), EC);
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
         std::istream response_stream(&response);
         std::string answer;
         std::getline(response_stream, answer);
-        std::cout << "\nBank dh pub: \n"<<answer << std::endl;
+        //std::cout << "\nBank dh pub: \n"<<answer << std::endl;
         //base64decode it
         std::string pubBstr;
         StringSource ss2(answer, true, new Base64Decoder(new StringSink(pubBstr)));
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
 
         Integer a;
 	a.Decode(sharedA.BytePtr(), sharedA.SizeInBytes());
-        cout << "\nShared secret (A): " << std::hex << a << endl;
+        //cout << "\nShared secret (A): " << std::hex << a << endl;
 
         //////////////////////////////////////////////////////////////
 
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
             StringSource es(request, true, new StreamTransformationFilter(cfbEncryption,new StringSink(encryptedRequest)));
             //std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
             std::string encryptedRequest64;
-            StringSource aesEncode((byte*)encryptedRequest.c_str(),encryptedRequest.size(),true,new Base64Encoder(new StringSink(encryptedRequest64)));
+            StringSource aesEncode(encryptedRequest,true,new Base64Encoder(new StringSink(encryptedRequest64)));
             encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
             //std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
 

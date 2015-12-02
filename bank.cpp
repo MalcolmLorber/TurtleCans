@@ -162,15 +162,18 @@ class Session : public std::enable_shared_from_this<Session> {
                 std::string data64dec;
                 std::string sdata(data_);
                 //std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
-                StringSource ss((byte*)(sdata.c_str()),sdata.size(),true, new Base64Decoder(new StringSink(data64dec)));
+                StringSource ss(sdata,true, new Base64Decoder(new StringSink(data64dec)));
                 //std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
-                std::string decryptedRequest=""; 
+                std::string decryptedRequest; 
                 //std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
                 StringSource ds(data64dec, true, new StreamTransformationFilter(*cfbDecryption,new StringSink(decryptedRequest)));
-                std::cout<<"\nDec:\n"<<decryptedRequest<<std::endl;
+                //decryptedRequest.resize((Length*3 )/ 4);
+                //std::cout<<"\nDec:"<<decryptedRequest<<std::endl;
                 
                 strcpy(data_, decryptedRequest.c_str());
-                
+                if(decryptedRequest.size()<max_length){
+                    data_[decryptedRequest.size()]='\0';
+                }
                 if ((boost::asio::error::eof == EC) ||
                         (boost::asio::error::connection_reset == EC)) {
                     Process("logout");
@@ -208,6 +211,7 @@ class Session : public std::enable_shared_from_this<Session> {
                     std::cout << "Returned response: " << response << std::endl;
                     DoWrite(response_length);
                 }
+                memset(&data_[0],0,sizeof(data_));
             });
         }
         //Write to the bank socket 
@@ -282,7 +286,7 @@ class Session : public std::enable_shared_from_this<Session> {
         std::istream response_stream(&response);
         std::string answer;
         std::getline(response_stream, answer);
-        std::cout << "\nATM dh pub: \n"<<answer << std::endl;
+        //std::cout << "\nATM dh pub: \n"<<answer << std::endl;
         //base64decode it
         std::string pubAstr;
         StringSource ss2(answer, true, new Base64Decoder(new StringSink(pubAstr)));
@@ -291,7 +295,7 @@ class Session : public std::enable_shared_from_this<Session> {
         std::string pubB64;
         StringSource ss(pubB.data(),pubB.size()+1,true,new Base64Encoder(new StringSink(pubB64)));
         pubB64.erase(std::remove(pubB64.begin(),pubB64.end(),'\n'),pubB64.end());
-        std::cout<<"\nBank dh pub: \n"<<pubB64<<std::endl;
+        //std::cout<<"\nBank dh pub: \n"<<pubB64<<std::endl;
         boost::system::error_code EC;
         boost::asio::write(bank_socket_, boost::asio::buffer(pubB64),
                                 boost::asio::transfer_all(), EC);
@@ -311,7 +315,7 @@ class Session : public std::enable_shared_from_this<Session> {
 
         Integer b;
 	b.Decode(sharedB.BytePtr(), sharedB.SizeInBytes());
-        cout << "\nShared secret (B): " << std::hex << b << endl;
+        //cout << "\nShared secret (B): " << std::hex << b << endl;
         //count = std::min(dhA.AgreedValueLength(), dhB.AgreedValueLength());
         //if(!count || 0 != memcmp(sharedA.BytePtr(), sharedB.BytePtr(), count))
         //    throw runtime_error("Failed to reach shared secret");
