@@ -162,7 +162,7 @@ class Session : public std::enable_shared_from_this<Session> {
                 std::string data64dec;
                 std::string sdata(data_);
                 std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
-                StringSource ss((byte*)(sdata.c_str()),sdata.size()+1,true, new Base64Decoder(new StringSink(data64dec)));
+                StringSource ss((byte*)(sdata.c_str()),sdata.size(),true, new Base64Decoder(new StringSink(data64dec)));
                 std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
                 std::string decryptedRequest=""; 
                 std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
