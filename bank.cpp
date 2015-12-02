@@ -212,7 +212,6 @@ class Session : public std::enable_shared_from_this<Session> {
         enum {max_length = 1024};
         //Array to hold the incoming message
         char data_[max_length];
-        //string data_;
 };
 
 /*******************************************************************************
