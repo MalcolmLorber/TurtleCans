@@ -18,6 +18,7 @@ Description: Bank server that services requests from the ATM
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 //Program header files
 #include "validate.h"
 #include "bank_object.h"
@@ -43,11 +44,13 @@ class Session : public std::enable_shared_from_this<Session> {
     private:
         std::string Process(std::string command) {
             if (login) {
-                if (command != "827431" && command != "918427"  && 
-                                           command != "223175") {
+                if (!boost::regex_match(command, boost::regex("^\\d{1,6}$"))) {
                     return "error";
                 }
-                if (!bank.login(id, stoll(command))) {
+                long long result;
+                try {result = stoll(command);}
+                catch(std::exception & e) {return "error";}
+                if (!bank.login(id, result)) {
                     return "error";
                 }
                 login = false;
@@ -57,7 +60,10 @@ class Session : public std::enable_shared_from_this<Session> {
             else if (command.find("login") == 0 && !loggedin) {
                 if (!login) {   
                     int space = command.find(" ") + 1;
-                    id = stoll(command.substr(space, command.size() - space));
+                    try {
+                        id = stoll(command.substr(space, command.size() - space));
+                    }
+                    catch(std::exception & e) {return "error";}
                     login = true;
                     return "Enter your pin: ";
                 }
@@ -77,14 +83,21 @@ class Session : public std::enable_shared_from_this<Session> {
                 std::string username = temp.substr(space, temp.size() - space);
                 std::cout << "Amount: " << amount << std::endl;
                 std::cout << "Username: " << username << std::endl;
-                if (!bank.transfer(id, username, stoll(amount))) {
+                long long result;
+                try {result = stoll(amount);}
+                catch(std::exception & e) {return "error";}
+                if (!bank.transfer(id, username, result)) {
                     return "error";
                 }
                 return "Transfer successful";
             }
             else if (command.find("withdraw") == 0) {
                 int space = command.find(" ") + 1;
-                long long amount = stoll(command.substr(space, command.size() - space));
+                long long amount;
+                try {
+                    amount = stoll(command.substr(space, command.size() - space));
+                }
+                catch(std::exception & e) {return "error";}
                 if (!bank.withdraw(id, amount)) {
                     return "error";
                 }
@@ -92,7 +105,9 @@ class Session : public std::enable_shared_from_this<Session> {
                                                                 " withdrawn";
             }
             else if (command.find("logout") == 0) {
-                bank.logout(id);
+                if (!bank.logout(id)) {
+                    return "error";
+                }
                 loggedin = false;
                 return "Logout successful";
             }
@@ -161,7 +176,7 @@ class Session : public std::enable_shared_from_this<Session> {
         enum {max_length = 1024};
         //Array to hold the incoming message
         char data_[max_length];
-        long long id;
+        long long id = 0;
         bool login = false;
         bool loggedin = false;
 };
