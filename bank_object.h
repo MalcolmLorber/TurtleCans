@@ -11,35 +11,40 @@ public:
       //userVec = uVec;
       for (unsigned int i =0; i< uVec.size(); ++i){
         std::string uName = uVec[i].getName();
+        long long id = uVec[i].getID();
         loggedin[uName]=false;
         users[uName] = new User(uVec[i]);       
+        ids[id] = new User(uVec[i]);       
       }
     }
-    bool login(std::string user, int pin){
+    bool login(long long id, long long pin){
         data_m.lock();
-
-        if(users.count(user)!=1){
+        if(loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
         }
-        if(users[user]->getPin() != pin){
+        if(ids.count(id)!=1){
+            data_m.unlock();
+            return false;
+        }
+        if(ids[id]->getPin() != pin){
             data_m.unlock();
             return false;
         }
         
-        loggedin[user]=true;
+        loggedin[ids[id]->getName()]=true;
 
         data_m.unlock();
         return true;
     }
-    bool balance(std::string user, long long &retBal){
+    bool balance(long long id, long long &retBal){
         data_m.lock();
 
-        if(!loggedin[user]){
+        if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
         }
-        retBal = users[user]->getBalance();
+        retBal = users[ids[id]->getName()]->getBalance();
 
         data_m.unlock();
         return true;
@@ -66,10 +71,10 @@ public:
         return true; 
     }
 
-    bool withdraw(std::string user, long long amount){
+    bool withdraw(long long id, long long amount){
         data_m.lock();
 
-        if(!loggedin[user]){
+        if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
         }
@@ -77,23 +82,23 @@ public:
             data_m.unlock();
             return false;
         }
-        if(users[user]->getBalance()<amount){
+        if(users[ids[id]->getName()]->getBalance()<amount){
             data_m.unlock();
             return false;
         }
-        users[user]->removeMoney(amount);
+        users[ids[id]->getName()]->removeMoney(amount);
 
         data_m.unlock();
         return true;
     }
-    bool transfer(std::string user1, std::string user2, long long amount){
+    bool transfer(long long id, std::string user2, long long amount){
         data_m.lock();
 
-        if(!loggedin[user1]){
+        if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
         }
-        if(users[user1]->getBalance()<amount){
+        if(users[ids[id]->getName()]->getBalance()<amount){
             data_m.unlock();
             return false;
         }
@@ -111,21 +116,21 @@ public:
             data_m.unlock();
             return false;    
         }
-        users[user1]->removeMoney(amount);        
+        users[ids[id]->getName()]->removeMoney(amount);        
         users[user2]->addMoney(amount);
 
         data_m.unlock();
         return true;
     }
-    bool logout(std::string user){
+    bool logout(long long id){
         data_m.lock();
         
-        if(!loggedin[user]){
+        if(!loggedin[ids[id]->getName()]){
             data_m.unlock();
             return false;
         }
         
-        loggedin[user]=false;
+        loggedin[ids[id]->getName()]=false;
         
         data_m.unlock();
         return true;
@@ -133,6 +138,7 @@ public:
 private:
     std::unordered_map<std::string, bool> loggedin;
     std::unordered_map<std::string, User*> users;
+    std::unordered_map<long long, User*> ids;
     std::mutex data_m;
 };
 

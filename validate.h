@@ -23,6 +23,7 @@ bool IsValidATMCommand(std::string command) {
     std::vector<boost::regex> Allowed =
                 {boost::regex("^login\\s{1}(alice|bob|eve)$"), 
                  boost::regex("^login\\s{1}(912343|396175|431253)$"), 
+                 boost::regex("^\\d{1,6}$"), 
                  boost::regex("^balance$"), 
                  boost::regex("^withdraw\\s{1}\\d{1,19}$"), 
                  boost::regex("^transfer\\s{1}\\d{1,19}\\s{1}(alice|bob|eve)$"), 

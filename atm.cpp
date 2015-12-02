@@ -31,7 +31,6 @@ int main(int argc, char** argv) {
         tcp::socket s(io_service);
         boost::asio::connect(s, iterator);
         while (true) {
-            std::cout << "Enter command: " ;
             std::string request;
             std::getline(std::cin, request);
             //Validate the user inputted command using regex
@@ -46,7 +45,6 @@ int main(int argc, char** argv) {
                 int account = 0;
                 std::string accountStr = "";
                 std::string user = request.substr(space, request.size() - space);
-                std::cout << "USER: " << user << std::endl;
                 std::ifstream cardFile(user + ".card");
                 
                 if(cardFile.is_open()){
@@ -60,12 +58,15 @@ int main(int argc, char** argv) {
                 } 
                 cardFile.close();               
                 request = "login " + accountStr;
-                std::cout << request << std::endl; 
             }
 
-            boost::system::error_code ignored_error;
+            boost::system::error_code EC;
             boost::asio::write(s, boost::asio::buffer(request),
-                                boost::asio::transfer_all(), ignored_error);
+                                boost::asio::transfer_all(), EC);
+            if ((boost::asio::error::eof == EC) ||                           
+                              (boost::asio::error::connection_reset == EC)) {
+                std::cerr << "ERROR" << std::endl;
+            }
             boost::asio::streambuf response;
             boost::asio::read_until(s, response, "\0");
             std::istream response_stream(&response);
@@ -75,7 +76,7 @@ int main(int argc, char** argv) {
         }
     }
     catch (std::exception & e){
-        std::cerr << "Exception: " << e.what() << std::endl;
+        std::cerr << "DISCONNECTED FROM BANK" << std::endl;
     }
     return EXIT_SUCCESS;
 }
