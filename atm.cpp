@@ -32,7 +32,6 @@ int main(int argc, char** argv) {
         boost::asio::connect(s, iterator);        
         std::string request;
 	while (std::getline(std::cin, request)) {
-             
             //Validate the user inputted command using regex
             if (!IsValidATMCommand(request)) {
                 std::cerr << "INVALID COMMAND" << std::endl;
