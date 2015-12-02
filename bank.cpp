@@ -218,6 +218,17 @@ private:
         void DoWrite(std::size_t Length) {
             std::cout << data_ << std::endl;
             auto Self(shared_from_this());
+            
+            std::string request(data_);
+            std::string encryptedRequest;
+            StringSource es(request, true, new StreamTransformationFilter(*cfbEncryption,new StringSink(encryptedRequest)));
+            //std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
+            std::string encryptedRequest64;
+            StringSource aesEncode(encryptedRequest,true,new Base64Encoder(new StringSink(encryptedRequest64)));
+            encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
+            //std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
+            strcpy(data_, encryptedRequest64.c_str());
+            Length = encryptedRequest64.size();
             boost::asio::async_write(bank_socket_, 
                                     boost::asio::buffer(data_, Length),
                         [this, Self](boost::system::error_code EC, std::size_t){

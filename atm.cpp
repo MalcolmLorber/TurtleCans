@@ -218,7 +218,14 @@ int main(int argc, char** argv) {
             std::istream response_stream(&response);
             std::string answer;
             std::getline(response_stream, answer);
-            std::cout << answer << std::endl;
+            
+            std::string data64dec;
+            std::string sdata(answer);
+            StringSource ss(sdata,true, new Base64Decoder(new StringSink(data64dec)));
+            std::string decryptedRequest;
+            StringSource ds(data64dec, true, new StreamTransformationFilter(cfbDecryption,new StringSink(decryptedRequest)));
+            
+            std::cout << /*answer*/ decryptedRequest << std::endl;
         }
     }
     catch (std::exception & e){
