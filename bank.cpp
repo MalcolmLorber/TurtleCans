@@ -68,96 +68,96 @@ Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253),
  @RTN:  N/A
 *******************************************************************************/
 class Session : public std::enable_shared_from_this<Session> {
-    public:
-        Session(tcp::socket Socket1) 
-            : bank_socket_(std::move(Socket1)) {
-            setupenc();
-        }
+public:
+    Session(tcp::socket Socket1) 
+        : bank_socket_(std::move(Socket1)) {
+        setupenc();
+    }
     ~Session(){
         delete cfbEncryption;
         delete cfbDecryption;
     }
-        void Start() {
-            DoRead();
-        }
-    private:
-        std::string Process(std::string command) {
-            if (login) {
-                if (!boost::regex_match(command, boost::regex("^\\d{1,6}$"))) {
-                    return "error";
-                }
-                long long result;
-                try {result = stoll(command);}
-                catch(std::exception & e) {return "error";}
-                if (!bank.login(id, result)) {
-                    return "error";
-                }
-                login = false;
-                loggedin = true;
-                return "Login successful";
-            }
-            else if (command.find("login") == 0 && !loggedin) {
-                if (!login) {   
-                    int space = command.find(" ") + 1;
-                    try {
-                        id = stoll(command.substr(space, command.size() - space));
-                    }
-                    catch(std::exception & e) {return "error";}
-                    login = true;
-                    return "Enter your pin: ";
-                }
-            }
-            else if (command.find("balance") == 0) {
-                long long returnBalance = 0;
-                if (!bank.balance(id, returnBalance)) {
-                    return "error";
-                }
-                return "Balance $" + boost::lexical_cast<std::string>(returnBalance);
-            }
-            else if (command.find("transfer") == 0) {
-                int space = command.find(" ") + 1;
-                std::string temp = command.substr(space, command.size() - space);
-                space = temp.find(" ") + 1;
-                std::string amount = temp.substr(0, space - 1);
-                std::string username = temp.substr(space, temp.size() - space);
-                std::cout << "Amount: " << amount << std::endl;
-                std::cout << "Username: " << username << std::endl;
-                long long result;
-                try {result = stoll(amount);}
-                catch(std::exception & e) {return "error";}
-                if (!bank.transfer(id, username, result)) {
-                    return "error";
-                }
-                return "Transfer successful";
-            }
-            else if (command.find("withdraw") == 0) {
-                int space = command.find(" ") + 1;
-                long long amount;
-                try {
-                    amount = stoll(command.substr(space, command.size() - space));
-                }
-                catch(std::exception & e) {return "error";}
-                if (!bank.withdraw(id, amount)) {
-                    return "error";
-                }
-                return "$" + boost::lexical_cast<std::string>(amount) + 
-                                                                " withdrawn";
-            }
-            else if (command.find("logout") == 0) {
-                if (!bank.logout(id)) {
-                    return "error";
-                }
-                loggedin = false;
-                return "Logout successful";
-            }
-            else {
+    void Start() {
+        DoRead();
+    }
+private:
+    std::string Process(std::string command) {
+        if (login) {
+            if (!boost::regex_match(command, boost::regex("^\\d{1,6}$"))) {
                 return "error";
             }
+            long long result;
+            try {result = stoll(command);}
+            catch(std::exception & e) {return "error";}
+            if (!bank.login(id, result)) {
+                return "error";
+            }
+            login = false;
+            loggedin = true;
+            return "Login successful";
         }
-        //Read from the listen socket (ATM socket)
-        void DoRead() {
-            auto Self(shared_from_this());    
-            bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
+        else if (command.find("login") == 0 && !loggedin) {
+            if (!login) {   
+                int space = command.find(" ") + 1;
+                try {
+                    id = stoll(command.substr(space, command.size() - space));
+                }
+                catch(std::exception & e) {return "error";}
+                login = true;
+                return "Enter your pin: ";
+            }
+        }
+        else if (command.find("balance") == 0) {
+            long long returnBalance = 0;
+            if (!bank.balance(id, returnBalance)) {
+                return "error";
+            }
+            return "Balance $" + boost::lexical_cast<std::string>(returnBalance);
+        }
+        else if (command.find("transfer") == 0) {
+            int space = command.find(" ") + 1;
+            std::string temp = command.substr(space, command.size() - space);
+            space = temp.find(" ") + 1;
+            std::string amount = temp.substr(0, space - 1);
+            std::string username = temp.substr(space, temp.size() - space);
+            std::cout << "Amount: " << amount << std::endl;
+            std::cout << "Username: " << username << std::endl;
+            long long result;
+            try {result = stoll(amount);}
+            catch(std::exception & e) {return "error";}
+            if (!bank.transfer(id, username, result)) {
+                return "error";
+            }
+            return "Transfer successful";
+        }
+        else if (command.find("withdraw") == 0) {
+            int space = command.find(" ") + 1;
+            long long amount;
+            try {
+                amount = stoll(command.substr(space, command.size() - space));
+            }
+            catch(std::exception & e) {return "error";}
+            if (!bank.withdraw(id, amount)) {
+                return "error";
+            }
+            return "$" + boost::lexical_cast<std::string>(amount) + 
+                " withdrawn";
+        }
+        else if (command.find("logout") == 0) {
+            if (!bank.logout(id)) {
+                return "error";
+            }
+            loggedin = false;
+            return "Logout successful";
+            }
+        else {
+            return "error";
+        }
+    }
+    //Read from the listen socket (ATM socket)
+    void DoRead() {
+        auto Self(shared_from_this());    
+        bank_socket_.async_read_some(boost::asio::buffer(data_, max_length),
             [this, Self](boost::system::error_code EC, std::size_t Length) {
                 std::string data64dec;
                 std::string sdata(data_);
@@ -263,11 +263,6 @@ class Session : public std::enable_shared_from_this<Session> {
 
         size_t count = 0;
 
-        p = dhB.GetGroupParameters().GetModulus();
-        q = dhB.GetGroupParameters().GetSubgroupOrder();
-        g = dhB.GetGroupParameters().GetGenerator();
-
-        // http://groups.google.com/group/sci.crypt/browse_thread/thread/7dc7eeb04a09f0ce
         Integer v = ModularExponentiation(g, q, p);
         if(v != Integer::One())
             throw runtime_error("Failed to verify order of the subgroup");
@@ -305,8 +300,6 @@ class Session : public std::enable_shared_from_this<Session> {
         }
 
         //////////////////////////////////////////////////////////////
-        //if(dhA.AgreedValueLength() != dhB.AgreedValueLength())
-        //    throw runtime_error("Shared secret size mismatch");
 
         SecByteBlock sharedB(dhB.AgreedValueLength());
         
@@ -315,10 +308,6 @@ class Session : public std::enable_shared_from_this<Session> {
 
         Integer b;
 	b.Decode(sharedB.BytePtr(), sharedB.SizeInBytes());
-        //cout << "\nShared secret (B): " << std::hex << b << endl;
-        //count = std::min(dhA.AgreedValueLength(), dhB.AgreedValueLength());
-        //if(!count || 0 != memcmp(sharedA.BytePtr(), sharedB.BytePtr(), count))
-        //    throw runtime_error("Failed to reach shared secret");
 
         int aesKeyLength = SHA256::DIGESTSIZE;
         int defBlockSize = AES::BLOCKSIZE;
@@ -329,14 +318,14 @@ class Session : public std::enable_shared_from_this<Session> {
         cfbEncryption = new CryptoPP::CFB_Mode<AES>::Encryption(key, aesKeyLength, iv);
         cfbDecryption = new CryptoPP::CFB_Mode<AES>::Decryption(key, aesKeyLength, iv);
     }
-        tcp::socket bank_socket_;
-        //Max length of messages passed through the proxy
-        enum {max_length = 1024};
-        //Array to hold the incoming message
-        char data_[max_length];
-        long long id = 0;
-        bool login = false;
-        bool loggedin = false;
+    tcp::socket bank_socket_;
+    //Max length of messages passed through the proxy
+    enum {max_length = 1024};
+    //Array to hold the incoming message
+    char data_[max_length];
+    long long id = 0;
+    bool login = false;
+    bool loggedin = false;
     
 };
 

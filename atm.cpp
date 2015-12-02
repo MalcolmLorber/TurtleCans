@@ -110,10 +110,6 @@ int main(int argc, char** argv) {
 
         size_t count = 0;
 
-        p = dhA.GetGroupParameters().GetModulus();
-        q = dhA.GetGroupParameters().GetSubgroupOrder();
-        g = dhA.GetGroupParameters().GetGenerator();
-
         Integer v = ModularExponentiation(g, q, p);
         if(v != Integer::One())
             throw runtime_error("Failed to verify order of the subgroup");
