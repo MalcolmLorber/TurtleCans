@@ -83,6 +83,13 @@ class Session : public std::enable_shared_from_this<Session> {
                 return "Transfer successful";
             }
             else if (command.find("withdraw") == 0) {
+                int space = command.find(" ") + 1;
+                long long amount = stoll(command.substr(space, command.size() - space));
+                if (!bank.withdraw(id, amount)) {
+                    return "error";
+                }
+                return "$" + boost::lexical_cast<std::string>(amount) + 
+                                                                " withdrawn";
             }
             else if (command.find("logout") == 0) {
                 bank.logout(id);
