@@ -8,7 +8,7 @@ using namespace CryptoPP;
 int main()
 {
     int i=0;
-    while(true){
+    //while(true){
         // InvertibleRSAFunction is used directly only because the private key
         // won't actually be used to perform any cryptographic operation;
         // otherwise, an appropriate typedef'ed type from rsa.h would have been used.
@@ -35,6 +35,6 @@ int main()
         pubkey.DEREncode(pubkeysink);
         pubkeysink.MessageEnd();
         std::cout<<"generated"<<std::endl;
-        i++;
-    }
+        //i++;
+        // }
 }

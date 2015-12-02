@@ -44,6 +44,21 @@ using boost::asio::ip::tcp;
 using namespace CryptoPP;
 using namespace std;
 
+//CryptoPP::CFB_Mode<AES>::Encryption cfbEncryption;
+//    CryptoPP::CFB_Mode<AES>::Decryption cfbDecryption;
+
+int roundUp(int numToRound, int multiple)
+{
+    if (multiple == 0)
+        return numToRound;
+
+    int remainder = numToRound % multiple;
+    if (remainder == 0)
+        return numToRound;
+
+    return numToRound + multiple - remainder;
+}
+
 Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253),
           User("bob", 50ll, 918427, 396175), User("eve", 0ll, 223175, 912343)}); 
 /*******************************************************************************
@@ -154,6 +169,25 @@ setupenc();
                 //std::cout<<enc_msg<<std::endl;
                 
                 //strcpy(data_,enc_msg);
+                                   
+                //std::string fixedlen = std::string(data_).substr(0,4);
+                //fixedlen.erase(0,fixedlen.find_first_not_of('0'));
+                //std::cout<<"\nFixed: "<<fixedlen<<std::endl;
+                //int msgsize = stoi(fixedlen);
+                //std::cout<<"\nMsgsize: "<<msgsize<<std::endl;
+                
+                std::string data64dec;
+                std::string sdata(data_);
+                std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
+                StringSource ss((byte*)(sdata.c_str()),sdata.size()+1,true, new Base64Decoder(new StringSink(data64dec)));
+                std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
+                //char* decryptedRequest = new char[msgsize+1];
+                std::string decryptedRequest=""; 
+                std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
+                //cfbDecryption.ProcessData((byte*)decryptedRequest,(const byte*)data64dec.c_str(),msgsize);
+                StringSource ds(data64dec, true, new StreamTransformationFilter(*cfbDecryption,new StringSink(decryptedRequest)));
+                std::cout<<"\nDec:\n"<<decryptedRequest<<std::endl;
+                
                 if ((boost::asio::error::eof == EC) ||
                         (boost::asio::error::connection_reset == EC)) {
                     Process("logout");
@@ -206,8 +240,8 @@ setupenc();
             });
         }
     
-    CryptoPP::CFB_Mode<AES>::Encryption cfbEncryption;
-    CryptoPP::CFB_Mode<AES>::Decryption cfbDecryption;
+    CryptoPP::CFB_Mode<AES>::Encryption* cfbEncryption;
+    CryptoPP::CFB_Mode<AES>::Decryption* cfbDecryption;
     void setupenc(){
         CryptoPP::Integer p("0x87A8E61DB4B6663CFFBBD19C651959998CEEF608660DD0F2\
                           5D2CEED4435E3B00E00DF8F1D61957D4FAF7DF4561B2AA30\
@@ -305,8 +339,8 @@ setupenc();
         SHA256().CalculateDigest(key, sharedB, sharedB.size());
         byte iv[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
         //rndA.GenerateBlock(iv, AES::BLOCKSIZE);
-        cfbEncryption = CryptoPP::CFB_Mode<AES>::Encryption(key, aesKeyLength, iv);
-        cfbDecryption = CryptoPP::CFB_Mode<AES>::Decryption(key, aesKeyLength, iv);
+        cfbEncryption = new CryptoPP::CFB_Mode<AES>::Encryption(key, aesKeyLength, iv);
+        cfbDecryption = new CryptoPP::CFB_Mode<AES>::Decryption(key, aesKeyLength, iv);
     }
         tcp::socket bank_socket_;
         //Max length of messages passed through the proxy

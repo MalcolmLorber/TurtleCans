@@ -14,6 +14,7 @@ Description: Proxy program that only transports data to and from the bank
 #include "validate.h"
 #include <fstream>
 #include <algorithm>
+#include <iomanip>
 
 #include "cryptopp/osrng.h"
 #include "cryptopp/integer.h"
@@ -31,6 +32,31 @@ Description: Proxy program that only transports data to and from the bank
 using boost::asio::ip::tcp;
 using namespace CryptoPP;
 using namespace std;
+
+int roundUp(int numToRound, int multiple)
+{
+    if (multiple == 0)
+        return numToRound;
+
+    int remainder = numToRound % multiple;
+    if (remainder == 0)
+        return numToRound;
+
+    return numToRound + multiple - remainder;
+}
+
+std::string makeFixedLength(const int i, const int length=4)
+{
+    std::ostringstream ostr;
+
+    if (i < 0)
+        ostr << '-';
+
+    ostr << std::setfill('0') << std::setw(length) << (i < 0 ? -i : i);
+
+    return ostr.str();
+}
+
 int main(int argc, char** argv) {
     try {
         
@@ -174,7 +200,7 @@ int main(int argc, char** argv) {
                 request = "login " + accountStr;
             }
 
-            boost::system::error_code EC;
+            
             /*char* enc_msg = new char[request.length()+1];
             strcpy(enc_msg,request.c_str());
             cfbEncryption.ProcessData((byte*)enc_msg, (byte*)enc_msg,(int)strlen(enc_msg)+1);
@@ -184,7 +210,36 @@ int main(int argc, char** argv) {
             delete [] enc_msg;
             
             std::cout<<encreq<<std::endl;*/
-            boost::asio::write(s, boost::asio::buffer(request),
+
+            //char* encryptedRequest = new char[roundUp(request.length(),16)];
+            std::string encryptedRequest;
+            //cfbEncryption.ProcessData((byte*)encryptedRequest,(const byte*)request.c_str(),request.length()+1);
+            StringSource es(request, true, new StreamTransformationFilter(cfbEncryption,new StringSink(encryptedRequest)));
+            std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
+            std::string encryptedRequest64;
+            StringSource aesEncode((byte*)encryptedRequest.c_str(),encryptedRequest.size()+1/*roundUp(request.length(),16)+2*/,true,new Base64Encoder(new StringSink(encryptedRequest64)));
+            encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
+            std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
+            
+            //delete[] encryptedRequest;
+             
+
+            std::string data64dec;
+            std::string sdata(encryptedRequest64);
+            std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
+            StringSource ss((byte*)(sdata.c_str()),sdata.size()+1,true, new Base64Decoder(new StringSink(data64dec)));
+            std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
+            //char* decryptedRequest = new char[msgsize+1];
+            std::string decryptedRequest; 
+            std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
+            //cfbDecryption.ProcessData((byte*)decryptedRequest,(const byte*)data64dec.c_str(),msgsize);
+            StringSource ds(data64dec, true, new StreamTransformationFilter(cfbDecryption,new StringSink(decryptedRequest)));
+            std::cout<<"\nDec:\n"<<decryptedRequest<<std::endl;
+
+
+
+            boost::system::error_code EC;
+            boost::asio::write(s, boost::asio::buffer(encryptedRequest64),
                                 boost::asio::transfer_all(), EC);
             if ((boost::asio::error::eof == EC) ||                           
                               (boost::asio::error::connection_reset == EC)) {
