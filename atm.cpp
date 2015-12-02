@@ -12,44 +12,18 @@ Description: Proxy program that only transports data to and from the bank
 #include<string>
 #include<regex>
 #include<vector>
-#include<memory> //may not need
-#include<utility> // may not need
+//#include<memory> 
+//#include<utility> 
 #include<boost/asio.hpp>
 #include "validate.h"
 
 using boost::asio::ip::tcp;
 
-
-//these should essentially all do the same thing
-//may not need multiple functions
-void login(){
-}
-void balance(){}
-void withdraw(){}
-void transfer(){}
-void logout(){
-    std::cout << "Session terminated" << std::endl; 
-}
-
-void ProcessCommand(std::string command){
-    // Use regex to check for valid command
-    bool matched = IsValidATMCommand(command);
-    if (!matched){
-        std::cerr << "INVALID COMMAND" << std::endl;
-        return;
-    }
-    if(command.find("login") == 0)          login(); 
-    else if (command == "balance")          balance();
-    else if(command.find("withdraw") == 0)  withdraw();
-    else if (command.find("transfer") == 0) transfer();
-    else if (command == "logout")           logout();
-}
-
 enum {max_length = 1024};
 
-int main(int argc, char** argv){
-    try{
-        if (argc != 2){
+int main(int argc, char** argv) {
+    try {
+        if (argc != 2) {
             std::cerr << "ERROR: USAGE <port-to-proxy>" << std::endl;
             return EXIT_FAILURE;
         }
@@ -64,26 +38,34 @@ int main(int argc, char** argv){
         tcp::socket s(io_service);
         boost::asio::connect(s, iterator);
        
-        while (true){
+        while (true) {
             //login, balance, withdraw, transfer, logout
             std::cout << "Enter command: " ;
-            // consider changing this vulnerable??
-            
             std::string request;
             std::getline(std::cin, request);
-            //char request[max_length];
-            //std::cin.getline(request, max_length);
-            
-            ProcessCommand(request);
-
+            if (IsValidATMCommand(request)) {
+                std::cerr << "INVALID COMMAND" << std::endl;
+                return EXIT_FAILURE;
+            }
+            /*
 	    std::vector<char> requestVec(request.begin(), request.end());
-            
-            size_t request_length = requestVec.size();
-            //boost::asio::write(s, boost::asio::buffer(request,request_length));
+            size_t request_length = sizeof(requestVec);
+            boost::asio::write(s, boost::asio::buffer(request,request_length));
 	    s.send(boost::asio::buffer(requestVec));	
-            //std::vector<char> reply;
-            //size_t reply_length = boost::asio::read(s, boost::asio::buffer(reply, request_length));
-	    //s.receive(boost::asio::buffer(reply));
+            */
+            boost::system::error_code ignored_error;
+            boost::asio::write(s, boost::asio::buffer(request),
+                                boost::asio::transfer_all(), ignored_error);
+            boost::asio::streambuf response;
+            boost::asio::read_until(s, response, "\n");
+            std::istream response_stream(&response);
+            std::string answer;
+            response_stream >> answer;
+            std::cout << answer << std::endl;
+            /*
+            std::vector<char> size;
+            size_t reply_length = boost::asio::read(s,
+                                    boost::asio::buffer(reply, 4));
 		
 
 	    std::vector<char> reply(s.available());
@@ -91,6 +73,7 @@ int main(int argc, char** argv){
 
 	    std::string replyStr(reply.begin(), reply.end());
             std::cout << "REPLY: " << replyStr << reply.size() << std::endl;           
+            */
         }
     }
     catch (std::exception & e){
