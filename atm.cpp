@@ -203,11 +203,11 @@ int main(int argc, char** argv) {
             
             std::string encryptedRequest;
             StringSource es(request, true, new StreamTransformationFilter(cfbEncryption,new StringSink(encryptedRequest)));
-            std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
+            //std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
             std::string encryptedRequest64;
             StringSource aesEncode((byte*)encryptedRequest.c_str(),encryptedRequest.size(),true,new Base64Encoder(new StringSink(encryptedRequest64)));
             encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
-            std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
+            //std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
 
 
             boost::system::error_code EC;
