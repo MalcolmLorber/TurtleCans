@@ -1,9 +1,17 @@
+/*******************************************************************************
+Name: Samuel Wenninger, Brandon Drumheller, and Malcolm Lorber
+Date Created: 12-02-2015
+Filename: validate.h
+*******************************************************************************/
+
 #ifndef _validate_h_
 #define _validate_h_
 
-#include <boost/regex.hpp>
+//Standard Library
 #include <vector>
 #include <string>
+//Boost
+#include <boost/regex.hpp>
 
 //Check if the given command is a valid bank command shell command
 bool IsValidBankCommand(std::string command) {                                       
