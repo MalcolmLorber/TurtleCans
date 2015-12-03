@@ -147,6 +147,9 @@ class Session : public std::enable_shared_from_this<Session> {
                 loggedin = false;
                 return "Logout successful";
             }
+            else {
+            	return "error";
+            }
         }
     //Read from the listen socket (ATM socket)
     void DoRead() {
