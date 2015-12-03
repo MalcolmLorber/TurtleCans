@@ -151,20 +151,63 @@ int main(int argc, char** argv) {
         if(!dhA.Agree(sharedA, privA, pubB))
             throw runtime_error("Failed to reach shared secret (1A)");
 
-        Integer a;
-	a.Decode(sharedA.BytePtr(), sharedA.SizeInBytes());
+        //Integer a;
+	//a.Decode(sharedA.BytePtr(), sharedA.SizeInBytes());
         //cout << "\nShared secret (A): " << std::hex << a << endl;
-
+        
         //////////////////////////////////////////////////////////////
 
         int aesKeyLength = SHA256::DIGESTSIZE;
         int defBlockSize = AES::BLOCKSIZE;
         SecByteBlock key(SHA256::DIGESTSIZE);
         SHA256().CalculateDigest(key, sharedA, sharedA.size());
-        byte iv[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        byte iv1[AES::BLOCKSIZE];//={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        //byte iv2[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
         //rndA.GenerateBlock(iv, AES::BLOCKSIZE);
-        CFB_Mode<AES>::Encryption cfbEncryption(key, aesKeyLength, iv);
-        CFB_Mode<AES>::Decryption cfbDecryption(key, aesKeyLength, iv);
+        
+
+        boost::asio::streambuf response2;
+        boost::asio::read_until(s, response2, "\0");
+        std::cout<<"1b"<<std::endl;
+        std::istream response_stream2(&response2);
+        std::string answer2;
+        std::getline(response_stream2, answer2);
+        std::string iv1string;
+        StringSource ssiv1(answer2,true,new Base64Decoder(new StringSink(iv1string)));
+        if(iv1string.length()<16){
+            throw std::exception();
+        }
+        for(int i=0;i<16;i++){
+            iv1[i]=iv1string[i];
+        }
+        //std::cout<<(char*)iv1<<std::endl;
+        /*
+        boost::asio::streambuf response3;
+        std::cout<<"2a"<<std::endl;
+        boost::asio::read_until(s, response3, "\0");
+        std::cout<<"2b"<<std::endl;
+        std::istream response_stream3(&response3);
+        std::string answer3;
+        std::getline(response_stream3, answer3);
+        std::string iv2string;
+        StringSource ssiv2(answer3,true,new Base64Decoder(new StringSink(iv2string)));
+        if(iv2string.length()<16){
+            throw std::exception();
+        }
+        for(int i=0;i<16;i++){
+            iv2[i]=iv2string[i];
+            }*/
+        std::string ivdisp;
+        StringSource(iv1, sizeof(iv1), true,
+		new HexEncoder(
+			new StringSink(ivdisp)
+		) // HexEncoder
+	); // StringSource
+	cout << "iv: " << ivdisp << endl;
+
+        CFB_Mode<AES>::Encryption cfbEncryption(key, aesKeyLength, iv1);
+        CFB_Mode<AES>::Decryption cfbDecryption(key, aesKeyLength, iv1);
+        //std::cout<<(char*)iv2<<std::endl;
         
         //end handshake
 

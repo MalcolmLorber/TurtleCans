@@ -327,10 +327,32 @@ private:
         int defBlockSize = AES::BLOCKSIZE;
         SecByteBlock key(SHA256::DIGESTSIZE);
         SHA256().CalculateDigest(key, sharedB, sharedB.size());
-        byte iv[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-        //rndA.GenerateBlock(iv, AES::BLOCKSIZE);
-        cfbEncryption = new CryptoPP::CFB_Mode<AES>::Encryption(key, aesKeyLength, iv);
-        cfbDecryption = new CryptoPP::CFB_Mode<AES>::Decryption(key, aesKeyLength, iv);
+        byte iv1[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        byte iv2[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+        rndB.GenerateBlock(iv1, AES::BLOCKSIZE);
+        rndB.GenerateBlock(iv2, AES::BLOCKSIZE);
+
+        std::string iv164, iv264;
+        StringSource ssiv1(iv1,17,true,new Base64Encoder(new StringSink(iv164)));
+            //ssiv2(iv2,17,true,new Base64Encoder(new StringSink(iv264)));
+        iv164.erase(std::remove(iv164.begin(),iv164.end(),'\n'),iv164.end());
+        iv164.append("\0");
+        //iv264.erase(std::remove(iv264.begin(),iv264.end(),'\n'),iv264.end());
+        //iv264.append("\0");
+        boost::asio::write(bank_socket_, boost::asio::buffer(iv164),
+                           boost::asio::transfer_all(), EC);
+        if ((boost::asio::error::eof == EC) ||                           
+            (boost::asio::error::connection_reset == EC)) {
+            std::cerr << "ERROR" << std::endl;
+        }
+        //boost::asio::write(bank_socket_, boost::asio::buffer(iv264),
+        //                   boost::asio::transfer_all(), EC);
+        //if ((boost::asio::error::eof == EC) ||                           
+        //    (boost::asio::error::connection_reset == EC)) {
+        //    std::cerr << "ERROR" << std::endl;
+        //}
+        cfbEncryption = new CryptoPP::CFB_Mode<AES>::Encryption(key, aesKeyLength, iv1);
+        cfbDecryption = new CryptoPP::CFB_Mode<AES>::Decryption(key, aesKeyLength, iv1);
     }
     tcp::socket bank_socket_;
     //Max length of messages passed through the proxy
