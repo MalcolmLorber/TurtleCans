@@ -31,7 +31,7 @@ to them to prevent replay
 8. The Bank decrypts the message and sends its Diffie-Hellman public key encrypted using the ATM's RSA public key to the ATM.
 9. The ATM recieves the message and decrypts it.
 10. ATM sends Bank an acknowledgment
-11. The Bank receives the acknowledgment dssends its the initial value as plain text to the ATM.
+11. The Bank receives the acknowledgment and sends its the initial value as plain text to the ATM.
 12. AES Cipher Feedback is used for all further communication with ATM to Bank communication using the first initial value and Bank to ATM communication using the second initial value.
 
 ###Error Handling
