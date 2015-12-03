@@ -163,46 +163,6 @@ class Session : public std::enable_shared_from_this<Session> {
                 return "Logout successful";
             }
         }
-        else if (command.find("transfer") == 0) {
-            int space = command.find(" ") + 1;
-            std::string temp = command.substr(space, command.size() - space);
-            space = temp.find(" ") + 1;
-            std::string amount = temp.substr(0, space - 1);
-            std::string username = temp.substr(space, temp.size() - space);
-            std::cout << "Amount: " << amount << std::endl;
-            std::cout << "Username: " << username << std::endl;
-            long long result;
-            try {result = stoll(amount);}
-            catch(std::exception & e) {return "error";}
-            if (!bank.transfer(id, username, result)) {
-                return "error";
-            }
-            return "Transfer successful";
-        }
-        else if (command.find("withdraw") == 0) {
-            int space = command.find(" ") + 1;
-            long long amount;
-            try {
-                amount = stoll(command.substr(space, command.size() - space));
-            }
-            catch(std::exception & e) {return "error";}
-            if (!bank.withdraw(id, amount)) {
-                return "error";
-            }
-            return "$" + boost::lexical_cast<std::string>(amount) + 
-                " withdrawn";
-        }
-        else if (command.find("logout") == 0) {
-            if (!bank.logout(id)) {
-                return "error";
-            }
-            loggedin = false;
-            return "Logout successful";
-            }
-        else {
-            return "error";
-        }
-    }
     //Read from the listen socket (ATM socket)
     void DoRead() {
         auto Self(shared_from_this());    
