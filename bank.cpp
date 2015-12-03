@@ -119,8 +119,6 @@ class Session : public std::enable_shared_from_this<Session> {
                 space = temp.find(" ") + 1;
                 std::string amount = temp.substr(0, space - 1);
                 std::string username = temp.substr(space, temp.size() - space);
-                std::cout << "Amount: " << amount << std::endl;
-                std::cout << "Username: " << username << std::endl;
                 long long result;
                 try {result = stoll(amount);}
                 catch(std::exception & e) {return "error";}
@@ -158,14 +156,9 @@ class Session : public std::enable_shared_from_this<Session> {
             [this, Self](boost::system::error_code EC, std::size_t Length) {
                 std::string data64dec;
                 std::string sdata(data_);
-                //std::cout<<"\ndata:\n"<<(sdata)<<std::endl<<sdata.size()<<std::endl;
                 StringSource ss(sdata,true, new Base64Decoder(new StringSink(data64dec)));
-                //std::cout<<"\nreached after decoder\n:"<<data64dec<<std::endl;
                 std::string decryptedRequest; 
-                //std::cout<<"\nmessgae length:"<<((int)data64dec.length())<<std::endl;
                 StringSource ds(data64dec, true, new StreamTransformationFilter(*cfbDecryption,new StringSink(decryptedRequest)));
-                //decryptedRequest.resize((Length*3 )/ 4);
-                //std::cout<<"\nDec:"<<decryptedRequest<<std::endl;
                 
                 strcpy(data_, decryptedRequest.c_str());
                 if(decryptedRequest.size()<max_length){
@@ -195,10 +188,8 @@ class Session : public std::enable_shared_from_this<Session> {
                         }
                     }
                     std::string response = Process(command);
-                    std::cout << "Before data_: " << data_ << std::endl;
                     int len = response.copy(data_, response.size(), 0);
                     data_[len] = '\0';
-                    std::cout << "After data_: " << data_ << std::endl;
                     //Close the connection if an error was encountered while
                     //processing the command.
                     if (response == "error") {
@@ -210,8 +201,6 @@ class Session : public std::enable_shared_from_this<Session> {
                         }
                     }
                     int response_length = response.size();
-		    std::cout << "Message received: " << command << std::endl;
-                    std::cout << "Returned response: " << response << std::endl;
                     //Send the response to the ATM if the operation completed
                     //correctly.
                     DoWrite(response_length);
@@ -221,17 +210,14 @@ class Session : public std::enable_shared_from_this<Session> {
         }
         //Write to the Bank socket 
         void DoWrite(std::size_t Length) {
-            std::cout << data_ << std::endl;
             auto Self(shared_from_this());
             
             std::string request(data_);
             std::string encryptedRequest;
             StringSource es(request, true, new StreamTransformationFilter(*cfbEncryption,new StringSink(encryptedRequest)));
-            //std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
             std::string encryptedRequest64;
             StringSource aesEncode(encryptedRequest,true,new Base64Encoder(new StringSink(encryptedRequest64)));
             encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
-            //std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
             strcpy(data_, encryptedRequest64.c_str());
             Length = encryptedRequest64.size();
             boost::asio::async_write(bank_socket_, 
@@ -296,7 +282,6 @@ class Session : public std::enable_shared_from_this<Session> {
         std::istream pub_response_stream(&pubresponse);
         std::string pubanswer;
         std::getline(pub_response_stream, pubanswer);
-        //std::cout<<"\nchal:"<<pubanswer<<std::endl;
         if (pubanswer.size() < 340) {
             throw runtime_error("ERROR");
         }
@@ -312,11 +297,7 @@ class Session : public std::enable_shared_from_this<Session> {
         r.Encode((byte *)chalrecovered.data(), chalrecovered.size());
         std::string chaldisp;
         StringSource(chalrecovered, true,
-		new HexEncoder(
-			new StringSink(chaldisp)
-		) // HexEncoder
-	); // StringSource
-	//cout << "\nchal: " << chaldisp << std::endl;
+		new HexEncoder( new StringSink(chaldisp)) ); 
         Integer m ((const byte*)chalrecovered.data(),128);
         Integer c2 = atmpubkey.ApplyFunction(m);
         
@@ -328,16 +309,12 @@ class Session : public std::enable_shared_from_this<Session> {
         std::string challenge64;
         StringSource pubss(challengeenc, true, new Base64Encoder(new StringSink(challenge64)));
         challenge64.erase(std::remove(challenge64.begin(),challenge64.end(),'\n'),challenge64.end());
-        //std::cout<<"\nchal:"<<challenge64<<std::endl;
         boost::asio::write(bank_socket_, boost::asio::buffer(challenge64),
                                 boost::asio::transfer_all(), EC);
         if ((boost::asio::error::eof == EC) ||                           
             (boost::asio::error::connection_reset == EC)) {
             std::cerr << "ERROR" << std::endl;
         }
-        
-        //std::cout<< "t: "<<chalrecovered<<std::endl;
-
         
         DH dhB;
 
@@ -354,13 +331,10 @@ class Session : public std::enable_shared_from_this<Session> {
 	   throw runtime_error("Failed to verify order of the subgroup");
 	}
 
-        //////////////////////////////////////////////////////////////
-
         SecByteBlock privB(dhB.PrivateKeyLength());
         SecByteBlock pubB(dhB.PublicKeyLength());
         dhB.GenerateKeyPair(rndB, privB, pubB);
 
-        //////////////////////////////////////////////////////////////
         //EXCHANGE PUBLICS HERE
         //recv(pubA)
         boost::asio::streambuf response;
@@ -368,7 +342,6 @@ class Session : public std::enable_shared_from_this<Session> {
         std::istream response_stream(&response);
         std::string answer;
         std::getline(response_stream, answer);
-        //std::cout << "\nATM dh pub: \n"<<answer << std::endl;
         //base64decode it
         std::string pubAstr;
         StringSource ss2(answer, true, new Base64Decoder(new StringSink(pubAstr)));
@@ -377,7 +350,6 @@ class Session : public std::enable_shared_from_this<Session> {
         std::string pubB64;
         StringSource ss(pubB.data(),pubB.size()+1,true,new Base64Encoder(new StringSink(pubB64)));
         pubB64.erase(std::remove(pubB64.begin(),pubB64.end(),'\n'),pubB64.end());
-        //std::cout<<"\nBank dh pub: \n"<<pubB64<<std::endl;
         
         boost::asio::write(bank_socket_, boost::asio::buffer(pubB64),
                                 boost::asio::transfer_all(), EC);
@@ -385,8 +357,6 @@ class Session : public std::enable_shared_from_this<Session> {
             (boost::asio::error::connection_reset == EC)) {
             std::cerr << "ERROR" << std::endl;
         }
-
-        //////////////////////////////////////////////////////////////
 
         SecByteBlock sharedB(dhB.AgreedValueLength());
         

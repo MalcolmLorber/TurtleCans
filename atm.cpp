@@ -141,7 +141,6 @@ int main(int argc, char** argv) {
         std::string challenge64;
         StringSource pubss(challengeenc, true, new Base64Encoder(new StringSink(challenge64)));
         challenge64.erase(std::remove(challenge64.begin(),challenge64.end(),'\n'),challenge64.end());
-        //std::cout<<"\nchal:"<<challenge64<<std::endl;
 
         //Send the encrypted challenge to the Bank.
         boost::asio::write(s, boost::asio::buffer(challenge64),
@@ -159,7 +158,6 @@ int main(int argc, char** argv) {
         std::istream pub_response_stream(&pubresponse);
         std::string pubanswer;
         std::getline(pub_response_stream, pubanswer);
-        //std::cout<<"\nchal:"<<pubanswer<<std::endl;
         
         //Decode the received encrypted challenge from Base 64 into non-Base 64
         //format.
@@ -177,7 +175,6 @@ int main(int argc, char** argv) {
         std::string chaldisp2;
         StringSource(chalrecovered, true, 
                                     new HexEncoder(new StringSink(chaldisp2)));
-        //std::cout<<"\nrec:"<<chaldisp2<<std::endl;
         
         //Ensure that the challenge received from the Bank after decryption is
         //the same challenge that was originally generated, encrypted using the
@@ -212,7 +209,6 @@ int main(int argc, char** argv) {
         std::string pubA64;
         StringSource ss(pubA.data(),pubA.size()+1,true,new Base64Encoder(new StringSink(pubA64)));
         pubA64.erase(std::remove(pubA64.begin(),pubA64.end(),'\n'), pubA64.end());
-        //std::cout<<"\nATM dh pub: \n"<<pubA64<<std::endl;
         boost::asio::write(s, boost::asio::buffer(pubA64),
                                 boost::asio::transfer_all(), EC);
         if ((boost::asio::error::eof == EC) ||                           
@@ -225,7 +221,6 @@ int main(int argc, char** argv) {
         std::istream response_stream(&response);
         std::string answer;
         std::getline(response_stream, answer);
-        //std::cout << "\nBank dh pub: \n"<<answer << std::endl;
 
         //Send an ack to the Bank
         boost::asio::write(s, boost::asio::buffer("ack"),
@@ -272,18 +267,8 @@ int main(int argc, char** argv) {
             iv1[i]=iv1string[i];
         }
         
-        /*
-        std::string ivdisp;
-        StringSource(iv1, sizeof(iv1), true,
-		new HexEncoder(
-			new StringSink(ivdisp)
-		) // HexEncoder
-	); // StringSource
-	cout << "iv: " << ivdisp << endl;
-        */
         CFB_Mode<AES>::Encryption cfbEncryption(key, aesKeyLength, iv1);
         CFB_Mode<AES>::Decryption cfbDecryption(key, aesKeyLength, iv1);
-        //std::cout<<(char*)iv2<<std::endl;
         
         //The handshake has been completed and AES CFB is used from this point
         //onward.
@@ -317,11 +302,9 @@ int main(int argc, char** argv) {
             
             std::string encryptedRequest;
             StringSource es(request, true, new StreamTransformationFilter(cfbEncryption,new StringSink(encryptedRequest)));
-            //std::cout<<"\nencrypt:\n"<<encryptedRequest<<std::endl;
             std::string encryptedRequest64;
             StringSource aesEncode(encryptedRequest,true,new Base64Encoder(new StringSink(encryptedRequest64)));
             encryptedRequest64.erase(std::remove(encryptedRequest64.begin(),encryptedRequest64.end(),'\n'), encryptedRequest64.end());
-            //std::cout<<"\nencrypt/encode:\n"<<encryptedRequest64<<std::endl;
 
 
             boost::system::error_code EC;
