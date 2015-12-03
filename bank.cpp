@@ -23,7 +23,7 @@ Description: Bank server that services requests from the ATM. Compile using the
 #include "validate.h"
 #include "bank_object.h"
 #include "user.h"
-
+//Crypto++
 #include "cryptopp/osrng.h"
 #include "cryptopp/integer.h"
 #include "cryptopp/nbtheory.h"
@@ -42,21 +42,6 @@ using boost::asio::ip::tcp;
 
 using namespace CryptoPP;
 using namespace std;
-
-//CryptoPP::CFB_Mode<AES>::Encryption cfbEncryption;
-//    CryptoPP::CFB_Mode<AES>::Decryption cfbDecryption;
-
-int roundUp(int numToRound, int multiple)
-{
-    if (multiple == 0)
-        return numToRound;
-
-    int remainder = numToRound % multiple;
-    if (remainder == 0)
-        return numToRound;
-
-    return numToRound + multiple - remainder;
-}
 
 //Initialize a global instance of the Bank with the three users and their
 //information.

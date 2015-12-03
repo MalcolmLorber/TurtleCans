@@ -16,9 +16,9 @@ Description: ATM program that is used to communicate with the Bank securely (see
 #include <iomanip>
 //Boost
 #include <boost/asio.hpp>
-//Contains all required input validation checks
+//Program header files
 #include "validate.h"
-
+//Crypto++
 #include "cryptopp/osrng.h"
 #include "cryptopp/integer.h"
 #include "cryptopp/nbtheory.h"
@@ -32,33 +32,10 @@ Description: ATM program that is used to communicate with the Bank securely (see
 #include "cryptopp/rsa.h"
 #include "cryptopp/base64.h"
 #include "cryptopp/files.h"
+
 using boost::asio::ip::tcp;
 using namespace CryptoPP;
 using namespace std;
-
-int roundUp(int numToRound, int multiple)
-{
-    if (multiple == 0)
-        return numToRound;
-
-    int remainder = numToRound % multiple;
-    if (remainder == 0)
-        return numToRound;
-
-    return numToRound + multiple - remainder;
-}
-
-std::string makeFixedLength(const int i, const int length=4)
-{
-    std::ostringstream ostr;
-
-    if (i < 0)
-        ostr << '-';
-
-    ostr << std::setfill('0') << std::setw(length) << (i < 0 ? -i : i);
-
-    return ostr.str();
-}
 
 /*******************************************************************************
  @DESC: Establish connection to the Bank, send the user inputted commands to the
@@ -109,8 +86,7 @@ int main(int argc, char** argv) {
         boost::asio::connect(s, iterator);        
         std::string request;
 
-        //handshake
-        
+        //Handshake
         FileSource privfile("atmprivkey.txt", true, new Base64Decoder);
         FileSource pubfile("atmpubkey.txt", true, new Base64Decoder);
         FileSource bankpubfile("pubkey.txt", true, new Base64Decoder);
