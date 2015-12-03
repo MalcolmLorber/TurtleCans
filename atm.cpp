@@ -86,49 +86,64 @@ int main(int argc, char** argv) {
         boost::asio::connect(s, iterator);        
         std::string request;
 
-        //Handshake
+        //Handshake begins here
+        //ATM RSA private key
         FileSource privfile("atmprivkey.txt", true, new Base64Decoder);
+        //ATM RSA public key
         FileSource pubfile("atmpubkey.txt", true, new Base64Decoder);
+        //Bank RSA public key
         FileSource bankpubfile("pubkey.txt", true, new Base64Decoder);
+
+        //Load ATM RSA private key taken from the file into a RSA private key 
+        //primitive (i.e. make it usable to the code that follows).
         ByteQueue privbytes;
         privfile.TransferTo(privbytes);
         RSA::PrivateKey privkey;
         privkey.Load(privbytes);
-        
+
+        //Load ATM RSA public key taken from the file into a RSA private key 
+        //primitive (i.e. make it usable to the code that follows).
         ByteQueue pubbytes;
         pubfile.TransferTo(pubbytes);
         RSA::PublicKey pubkey;
         pubkey.Load(pubbytes);
 
+        //Load Bank RSA public key taken from the file into a RSA private key 
+        //primitive (i.e. make it usable to the code that follows).
         ByteQueue bankpubbytes;
         bankpubfile.TransferTo(bankpubbytes);
         RSA::PublicKey bankpubkey;
         bankpubkey.Load(bankpubbytes);
-        
+
+        //Initialize the random number generator
         AutoSeededRandomPool rndA;
         boost::system::error_code EC;
-        
+
+        //Generate the challenge (random number) to send to the Bank
         byte challenge[128];
         rndA.GenerateBlock(challenge,128);
         std::string chaldisp;
-        StringSource(challenge, 128, true,
-		new HexEncoder(
-			new StringSink(chaldisp)
-		) // HexEncoder
-	); // StringSource
+        StringSource(challenge, 128, true, 
+                                    new HexEncoder(new StringSink(chaldisp)));
 	//cout << "\nchal: " << chaldisp << endl;
+        //Convert the challenge to an integer and encrypt it with the Bank's
+        //public key.
         Integer m ((const byte*)challenge,128);
         Integer c = bankpubkey.ApplyFunction(m);
         
+        //Convert the encrypted challenge back into a string.
         std::string challengeenc;
         size_t req = c.MinEncodedSize();
         challengeenc.resize(req);
         c.Encode((byte*)challengeenc.data(),challengeenc.size());
         
+        //Base 64 encode the encrypted challenge.
         std::string challenge64;
         StringSource pubss(challengeenc, true, new Base64Encoder(new StringSink(challenge64)));
         challenge64.erase(std::remove(challenge64.begin(),challenge64.end(),'\n'),challenge64.end());
         //std::cout<<"\nchal:"<<challenge64<<std::endl;
+
+        //Send the encrypted challenge to the Bank.
         boost::asio::write(s, boost::asio::buffer(challenge64),
                                 boost::asio::transfer_all(), EC);
         if ((boost::asio::error::eof == EC) ||                           
@@ -136,7 +151,9 @@ int main(int argc, char** argv) {
             std::cerr << "ERROR" << std::endl;
         }
 
-
+        //If all has gone correctly, receive the same challenge sent to the 
+        //Bank, from the Bank. However, this time the challenge is encrypted
+        //with the ATM's public key by the Bank.
         boost::asio::streambuf pubresponse;
         boost::asio::read_until(s, pubresponse, "\0");
         std::istream pub_response_stream(&pubresponse);
@@ -144,9 +161,13 @@ int main(int argc, char** argv) {
         std::getline(pub_response_stream, pubanswer);
         //std::cout<<"\nchal:"<<pubanswer<<std::endl;
         
+        //Decode the received encrypted challenge from Base 64 into non-Base 64
+        //format.
         std::string pubdec;
         StringSource pubrss(pubanswer, true, new Base64Decoder(new StringSink(pubdec)));
 
+        //Decrypt the encrypted challenge received from the Bank using the ATM's
+        //RSA private key.
         Integer c2((const byte*)pubdec.data(),pubdec.size());
         Integer r = privkey.CalculateInverse(rndA, c2);
         std::string chalrecovered;
@@ -154,21 +175,24 @@ int main(int argc, char** argv) {
         chalrecovered.resize(reqq);
         r.Encode((byte *)chalrecovered.data(), chalrecovered.size());
         std::string chaldisp2;
-        StringSource(chalrecovered, true,
-		new HexEncoder(
-			new StringSink(chaldisp2)
-		) // HexEncoder
-	); // StringSource
+        StringSource(chalrecovered, true, 
+                                    new HexEncoder(new StringSink(chaldisp2)));
         //std::cout<<"\nrec:"<<chaldisp2<<std::endl;
-        //Diffie hellman
+        
+        //Ensure that the challenge received from the Bank after decryption is
+        //the same challenge that was originally generated, encrypted using the
+        //Bank's RSA public key, and sent to the Bank.
         if(chaldisp != chaldisp2){
             throw runtime_error("Phony baloney");
         }
         
+        //Begin the Diffie-Hellman key exchange.
         DH dhA;
 
+        //Initialize the Diffie-Hellman parameters.
         dhA.AccessGroupParameters().Initialize(p, q, g);
 
+        //Validate the initialized Diffie-Hellman parameters.
         if(!dhA.GetGroupParameters().ValidateGroup(rndA, 3))
             throw runtime_error("Failed to validate prime and generator");
 
@@ -178,14 +202,13 @@ int main(int argc, char** argv) {
         if(v != Integer::One())
             throw runtime_error("Failed to verify order of the subgroup");
 
+        //Create the public and private Diffie-Hellman keys.
         SecByteBlock privA(dhA.PrivateKeyLength());
         SecByteBlock pubA(dhA.PublicKeyLength());
         dhA.GenerateKeyPair(rndA, privA, pubA);
 
-        //////////////////////////////////////////////////////////////
-        //EXCHANGE PUBLICS HERE
-        //send(pubA)
-        //base64encode it
+        //Begin exchanging the Diffie-Hellman public keys. Send the ATM's
+        //Diffie-Hellman public key to the Bank after Base 64 encoding it.
         std::string pubA64;
         StringSource ss(pubA.data(),pubA.size()+1,true,new Base64Encoder(new StringSink(pubA64)));
         pubA64.erase(std::remove(pubA64.begin(),pubA64.end(),'\n'), pubA64.end());
@@ -196,21 +219,22 @@ int main(int argc, char** argv) {
             (boost::asio::error::connection_reset == EC)) {
             std::cerr << "ERROR" << std::endl;
         }
-        //recv(pubB)
+        //Receive the Bank's Diffie-Hellman public key.
         boost::asio::streambuf response;
         boost::asio::read_until(s, response, "\0");
         std::istream response_stream(&response);
         std::string answer;
         std::getline(response_stream, answer);
         //std::cout << "\nBank dh pub: \n"<<answer << std::endl;
-        //base64decode it
+
+        //Base 64 decode the Bank's Diffie-Hellman public key.
         std::string pubBstr;
         StringSource ss2(answer, true, new Base64Decoder(new StringSink(pubBstr)));
         SecByteBlock pubB((byte*)pubBstr.data(),pubBstr.size());
-        //////////////////////////////////////////////////////////////
 
         SecByteBlock sharedA(dhA.AgreedValueLength());
 
+        //Ensure that a shared secret was established.
         if(!dhA.Agree(sharedA, privA, pubB))
             throw runtime_error("Failed to reach shared secret (1A)");
 
@@ -218,14 +242,14 @@ int main(int argc, char** argv) {
 	//a.Decode(sharedA.BytePtr(), sharedA.SizeInBytes());
         //cout << "\nShared secret (A): " << std::hex << a << endl;
         
-        //////////////////////////////////////////////////////////////
-
+        //Begin using AES CFB
         int aesKeyLength = SHA256::DIGESTSIZE;
         int defBlockSize = AES::BLOCKSIZE;
         SecByteBlock key(SHA256::DIGESTSIZE);
         SHA256().CalculateDigest(key, sharedA, sharedA.size());
         byte iv1[AES::BLOCKSIZE];
 
+        //Get the initial value from the Bank
         boost::asio::streambuf response2;
         boost::asio::read_until(s, response2, "\0");
         std::istream response_stream2(&response2);
@@ -253,8 +277,8 @@ int main(int argc, char** argv) {
         CFB_Mode<AES>::Decryption cfbDecryption(key, aesKeyLength, iv1);
         //std::cout<<(char*)iv2<<std::endl;
         
-        //end handshake
-
+        //The handshake has been completed and AES CFB is used from this point
+        //onward.
 	while (std::getline(std::cin, request)) {
             //Validate the user inputted command using regex (see "validate.h")
             if (!IsValidATMCommand(request)) {
