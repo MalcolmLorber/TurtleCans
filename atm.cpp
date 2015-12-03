@@ -100,8 +100,85 @@ int main(int argc, char** argv) {
 
         //handshake
         
-        DH dhA;
+        FileSource privfile("atmprivkey.txt", true, new Base64Decoder);
+        FileSource pubfile("atmpubkey.txt", true, new Base64Decoder);
+        FileSource bankpubfile("pubkey.txt", true, new Base64Decoder);
+        ByteQueue privbytes;
+        privfile.TransferTo(privbytes);
+        RSA::PrivateKey privkey;
+        privkey.Load(privbytes);
+        
+        ByteQueue pubbytes;
+        pubfile.TransferTo(pubbytes);
+        RSA::PublicKey pubkey;
+        pubkey.Load(pubbytes);
+
+        ByteQueue bankpubbytes;
+        bankpubfile.TransferTo(bankpubbytes);
+        RSA::PublicKey bankpubkey;
+        bankpubkey.Load(bankpubbytes);
+        
         AutoSeededRandomPool rndA;
+        boost::system::error_code EC;
+        
+        byte challenge[128];
+        rndA.GenerateBlock(challenge,128);
+        std::string chaldisp;
+        StringSource(challenge, 128, true,
+		new HexEncoder(
+			new StringSink(chaldisp)
+		) // HexEncoder
+	); // StringSource
+	//cout << "\nchal: " << chaldisp << endl;
+        Integer m ((const byte*)challenge,128);
+        Integer c = bankpubkey.ApplyFunction(m);
+        
+        std::string challengeenc;
+        size_t req = c.MinEncodedSize();
+        challengeenc.resize(req);
+        c.Encode((byte*)challengeenc.data(),challengeenc.size());
+        
+        std::string challenge64;
+        StringSource pubss(challengeenc, true, new Base64Encoder(new StringSink(challenge64)));
+        challenge64.erase(std::remove(challenge64.begin(),challenge64.end(),'\n'),challenge64.end());
+        //std::cout<<"\nchal:"<<challenge64<<std::endl;
+        boost::asio::write(s, boost::asio::buffer(challenge64),
+                                boost::asio::transfer_all(), EC);
+        if ((boost::asio::error::eof == EC) ||                           
+            (boost::asio::error::connection_reset == EC)) {
+            std::cerr << "ERROR" << std::endl;
+        }
+
+
+        boost::asio::streambuf pubresponse;
+        boost::asio::read_until(s, pubresponse, "\0");
+        std::istream pub_response_stream(&pubresponse);
+        std::string pubanswer;
+        std::getline(pub_response_stream, pubanswer);
+        //std::cout<<"\nchal:"<<pubanswer<<std::endl;
+        
+        std::string pubdec;
+        StringSource pubrss(pubanswer, true, new Base64Decoder(new StringSink(pubdec)));
+
+        Integer c2((const byte*)pubdec.data(),pubdec.size());
+        Integer r = privkey.CalculateInverse(rndA, c2);
+        std::string chalrecovered;
+        size_t reqq = r.MinEncodedSize();
+        chalrecovered.resize(reqq);
+        r.Encode((byte *)chalrecovered.data(), chalrecovered.size());
+        std::string chaldisp2;
+        StringSource(chalrecovered, true,
+		new HexEncoder(
+			new StringSink(chaldisp2)
+		) // HexEncoder
+	); // StringSource
+        //std::cout<<"\nrec:"<<chaldisp2<<std::endl;
+        //Diffie hellman
+        if(chaldisp != chaldisp2){
+            throw runtime_error("Phony baloney");
+        }
+        
+        DH dhA;
 
         dhA.AccessGroupParameters().Initialize(p, q, g);
 
@@ -126,7 +203,6 @@ int main(int argc, char** argv) {
         StringSource ss(pubA.data(),pubA.size()+1,true,new Base64Encoder(new StringSink(pubA64)));
         pubA64.erase(std::remove(pubA64.begin(),pubA64.end(),'\n'), pubA64.end());
         //std::cout<<"\nATM dh pub: \n"<<pubA64<<std::endl;
-        boost::system::error_code EC;
         boost::asio::write(s, boost::asio::buffer(pubA64),
                                 boost::asio::transfer_all(), EC);
         if ((boost::asio::error::eof == EC) ||                           
@@ -177,6 +253,7 @@ int main(int argc, char** argv) {
             iv1[i]=iv1string[i];
         }
         
+        /*
         std::string ivdisp;
         StringSource(iv1, sizeof(iv1), true,
 		new HexEncoder(
@@ -184,7 +261,7 @@ int main(int argc, char** argv) {
 		) // HexEncoder
 	); // StringSource
 	cout << "iv: " << ivdisp << endl;
-
+        */
         CFB_Mode<AES>::Encryption cfbEncryption(key, aesKeyLength, iv1);
         CFB_Mode<AES>::Decryption cfbDecryption(key, aesKeyLength, iv1);
         //std::cout<<(char*)iv2<<std::endl;

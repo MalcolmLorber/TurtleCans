@@ -264,8 +264,74 @@ private:
                           184B523D1DB246C32F63078490F00EF8D647D148D4795451\
                           5E2327CFEF98C582664B4C0F6CC41659");
         CryptoPP::Integer q("0x8CF83642A709A097B447997640129DA299B1A47D1EB3750BA308B0FE64F5FBD3");
-        DH dhB;
+        
         AutoSeededRandomPool rndB;
+        boost::system::error_code EC;
+        
+        FileSource privfile("privkey.txt", true, new Base64Decoder);
+        FileSource pubfile("pubkey.txt", true, new Base64Decoder);
+        FileSource atmpubfile("atmpubkey.txt",true,new Base64Decoder);
+        ByteQueue privbytes;
+        privfile.TransferTo(privbytes);
+        RSA::PrivateKey privkey;
+        privkey.Load(privbytes);
+        
+        ByteQueue pubbytes;
+        pubfile.TransferTo(pubbytes);
+        RSA::PublicKey pubkey;
+        pubkey.Load(pubbytes);
+        
+        ByteQueue atmpubbytes;
+        atmpubfile.TransferTo(atmpubbytes);
+        RSA::PublicKey atmpubkey;
+        atmpubkey.Load(atmpubbytes);
+
+        boost::asio::streambuf pubresponse;
+        boost::asio::read_until(bank_socket_, pubresponse, "\0");
+        std::istream pub_response_stream(&pubresponse);
+        std::string pubanswer;
+        std::getline(pub_response_stream, pubanswer);
+        //std::cout<<"\nchal:"<<pubanswer<<std::endl;
+        
+        std::string pubdec;
+        StringSource pubrss(pubanswer, true, new Base64Decoder(new StringSink(pubdec)));
+
+        Integer c((const byte*)pubdec.data(),pubdec.size());
+        Integer r = privkey.CalculateInverse(rndB, c);
+        std::string chalrecovered;
+        size_t req = r.MinEncodedSize();
+        chalrecovered.resize(req);
+        r.Encode((byte *)chalrecovered.data(), chalrecovered.size());
+        std::string chaldisp;
+        StringSource(chalrecovered, true,
+		new HexEncoder(
+			new StringSink(chaldisp)
+		) // HexEncoder
+	); // StringSource
+	//cout << "\nchal: " << chaldisp << std::endl;
+        Integer m ((const byte*)chalrecovered.data(),128);
+        Integer c2 = atmpubkey.ApplyFunction(m);
+        
+        std::string challengeenc;
+        size_t req2 = c2.MinEncodedSize();
+        challengeenc.resize(req2);
+        c2.Encode((byte*)challengeenc.data(),challengeenc.size());
+        
+        std::string challenge64;
+        StringSource pubss(challengeenc, true, new Base64Encoder(new StringSink(challenge64)));
+        challenge64.erase(std::remove(challenge64.begin(),challenge64.end(),'\n'),challenge64.end());
+        //std::cout<<"\nchal:"<<challenge64<<std::endl;
+        boost::asio::write(bank_socket_, boost::asio::buffer(challenge64),
+                                boost::asio::transfer_all(), EC);
+        if ((boost::asio::error::eof == EC) ||                           
+            (boost::asio::error::connection_reset == EC)) {
+            std::cerr << "ERROR" << std::endl;
+        }
+        
+        //std::cout<< "t: "<<chalrecovered<<std::endl;
+
+        
+        DH dhB;
 
         dhB.AccessGroupParameters().Initialize(p, q, g);
 
@@ -304,7 +370,7 @@ private:
         StringSource ss(pubB.data(),pubB.size()+1,true,new Base64Encoder(new StringSink(pubB64)));
         pubB64.erase(std::remove(pubB64.begin(),pubB64.end(),'\n'),pubB64.end());
         //std::cout<<"\nBank dh pub: \n"<<pubB64<<std::endl;
-        boost::system::error_code EC;
+        
         boost::asio::write(bank_socket_, boost::asio::buffer(pubB64),
                                 boost::asio::transfer_all(), EC);
         if ((boost::asio::error::eof == EC) ||                           
