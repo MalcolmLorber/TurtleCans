@@ -11,6 +11,10 @@ bank:
 atm:
 	$C -std=c++11 atm.cpp cryptopp/libcryptopp.a -lboost_system -lboost_thread -lboost_regex -lpthread -o atm.out
 
+rsa:
+	$C -std=c++11 genrsa.cpp cryptopp/libcryptopp.a -lpthread -o  genrsacpp
+	./genrsacpp
+
 clean: 
 	@touch atm.out
 	-@rm atm.out 
