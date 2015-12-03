@@ -2,10 +2,9 @@
 Name: Samuel Wenninger, Brandon Drumheller, and Malcolm Lorber
 Date Created: 11-25-2015
 Filename: bank.cpp
-Description: Bank server that services requests from the ATM 
-             using the Boost library. Compile using the following:
-             g++ -std=c++11 bank.cpp -lboost_system -lboost_thread -lboost_regex
-             -o bank.out 
+Description: Bank server that services requests from the ATM. Compile using the
+             following command: g++ -std=c++11 bank.cpp -lboost_system
+             -lboost_thread -lboost_regex -o bank.out 
 *******************************************************************************/
 
 //Standard library
@@ -26,11 +25,16 @@ Description: Bank server that services requests from the ATM
 
 using boost::asio::ip::tcp;
 
+//Initialize a global instance of the Bank with the three users and their
+//information.
 Bank bank(std::vector<User> {User("alice", 100ll, 827431, 431253),
           User("bob", 50ll, 918427, 396175), User("eve", 0ll, 223175, 912343)}); 
+
 /*******************************************************************************
- @DESC: The Session class is responsible for reading from the ATM socket and
-        to the Bank socket.
+ @DESC: Handle all operations relating to a session with an ATM including
+        reading messages from the ATM, performing the correct action based upon
+        said message, and either terminating the connection or sending a message
+        back to the ATM.
  @ARGS: N/A
  @RTN:  N/A
 *******************************************************************************/
@@ -42,7 +46,12 @@ class Session : public std::enable_shared_from_this<Session> {
             DoRead();
         }
     private:
+        //Process all valid commands. A command is known to be valid before it
+        //is passed to the Process function. If anything goes wrong, return
+        //"error" which will logout the user and close the connection.
         std::string Process(std::string command) {
+            //Handle receiving a user's pin from the ATM during the login
+            //process. Log the user in if the correct information is given.
             if (login) {
                 if (!boost::regex_match(command, boost::regex("^\\d{1,6}$"))) {
                     return "error";
@@ -57,6 +66,9 @@ class Session : public std::enable_shared_from_this<Session> {
                 loggedin = true;
                 return "Login successful";
             }
+            //Begin the login process by recording the id of the user that is
+            //trying to login and responding the ATM indicating that the user
+            //must enter their pin number.
             else if (command.find("login") == 0 && !loggedin) {
                 if (!login) {   
                     int space = command.find(" ") + 1;
@@ -68,6 +80,7 @@ class Session : public std::enable_shared_from_this<Session> {
                     return "Enter your pin: ";
                 }
             }
+            //Retrieve the current user's balance and send it to the ATM.
             else if (command.find("balance") == 0) {
                 long long returnBalance = 0;
                 if (!bank.balance(id, returnBalance)) {
@@ -75,6 +88,7 @@ class Session : public std::enable_shared_from_this<Session> {
                 }
                 return "Balance $" + boost::lexical_cast<std::string>(returnBalance);
             }
+            //Transfer money from the user currently logged in to another user.
             else if (command.find("transfer") == 0) {
                 int space = command.find(" ") + 1;
                 std::string temp = command.substr(space, command.size() - space);
@@ -91,6 +105,7 @@ class Session : public std::enable_shared_from_this<Session> {
                 }
                 return "Transfer successful";
             }
+            //Withdraw money from the current user's account.
             else if (command.find("withdraw") == 0) {
                 int space = command.find(" ") + 1;
                 long long amount;
@@ -104,6 +119,7 @@ class Session : public std::enable_shared_from_this<Session> {
                 return "$" + boost::lexical_cast<std::string>(amount) + 
                                                                 " withdrawn";
             }
+            //Logout the current user
             else if (command.find("logout") == 0) {
                 if (!bank.logout(id)) {
                     return "error";
@@ -125,16 +141,20 @@ class Session : public std::enable_shared_from_this<Session> {
                     Process("logout");
                 }
                 if (!EC) {
-                    if (Length > 1023) {
+                    //Close the connection if a message received is too large.
+                    if (Length > max_length - 1) {
                         if (bank_socket_.is_open()) {
+                            Process("logout");
                             bank_socket_.close();
                             return;
                         }
                     }
                     data_[Length] = '\0';
                     std::string command(data_);
+                    //Close the connection if the command received is invalid.
                     if (!IsValidATMCommand(command)) {
                         if (bank_socket_.is_open()) {
+                            Process("logout");
                             bank_socket_.close();
                             return;
                         }
@@ -144,6 +164,8 @@ class Session : public std::enable_shared_from_this<Session> {
                     int len = response.copy(data_, response.size(), 0);
                     data_[len] = '\0';
                     std::cout << "After data_: " << data_ << std::endl;
+                    //Close the connection if an error was encountered while
+                    //processing the command.
                     if (response == "error") {
                         if (bank_socket_.is_open()) {
                             //Logout before closing the socket
@@ -155,11 +177,13 @@ class Session : public std::enable_shared_from_this<Session> {
                     int response_length = response.size();
 		    std::cout << "Message received: " << command << std::endl;
                     std::cout << "Returned response: " << response << std::endl;
+                    //Send the response to the ATM if the operation completed
+                    //correctly.
                     DoWrite(response_length);
                 }
             });
         }
-        //Write to the bank socket 
+        //Write to the Bank socket 
         void DoWrite(std::size_t Length) {
             std::cout << data_ << std::endl;
             auto Self(shared_from_this());
@@ -177,13 +201,15 @@ class Session : public std::enable_shared_from_this<Session> {
         //Array to hold the incoming message
         char data_[max_length];
         long long id = 0;
+        //Received user's id and waiting to receive pin.
         bool login = false;
+        //User fully logged in.
         bool loggedin = false;
 };
 
 /*******************************************************************************
- @DESC: The Server class is responsible for initializing the connection to both
-        ATM and Bank ports and start a Session instance.
+ @DESC: The Server class is responsible for initializing the connection to the
+        ATM port and starting a Session instance.
  @ARGS: N/A
  @RTN:  N/A
 *******************************************************************************/
@@ -214,6 +240,7 @@ class Server {
         tcp::socket bank_socket_;
 };
 
+//Handle the Bank's command line input
 void CommandLine() {
     std::string command;
     while (true){
@@ -226,6 +253,8 @@ void CommandLine() {
             std::cerr << "INVALID COMMAND" << std::endl;
         }
         else {
+            //Allow the specified amount of money to be deposited to the
+            //specified user.
             if(command.find("deposit") == 0) {
                 int space1 = command.find(" ") +1;
                 std::string token1 = command.substr(space1, command.size() - space1);
@@ -248,12 +277,13 @@ void CommandLine() {
                     std::cout << "Balance increased by $" << amount << std::endl;
                 } 
             }
+            //Return the balance of a specified user.
             else if (command.find("balance") == 0){
                 int space = command.find(" ") + 1;
                 std::string username = command.substr(space, command.size() - space);
                 long long bal = 0;
                 if (!(bank.adminBalance(username, bal))){
-                    std::cerr << "Unable to retreive balance" << std::endl;
+                    std::cerr << "Unable to retrieve balance" << std::endl;
                     continue;
                 }    
                 else{
@@ -264,11 +294,10 @@ void CommandLine() {
     }
 }
 
-
 /*******************************************************************************
- @DESC: Call appropriate function(s) to initiate communication between the ATM
-        and the bank. 
- @ARGS: port to listen on, port to connect to the bank
+ @DESC: Start the Bank server and service all incoming requests with a separate
+        session for each ATM connected.
+ @ARGS: Port to listen on.
  @RTN:  EXIT_SUCCESS on success, EXIT_FAILURE on failure
 *******************************************************************************/
 int main (int argc, char* argv[]) {
@@ -278,6 +307,7 @@ int main (int argc, char* argv[]) {
                             " <bank-port>" << std::endl;
             return EXIT_FAILURE;
         }
+        //Start a thread to handle command line input to the Bank.
         boost::thread Thread(CommandLine);
         boost::asio::io_service IOService;
         int BankPort = std::stoi(argv[1]);
@@ -286,7 +316,7 @@ int main (int argc, char* argv[]) {
         IOService.run();
     }
     catch (std::exception & e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        std::cerr << "ERROR" << std::endl;
     }
     return EXIT_SUCCESS;
 }
