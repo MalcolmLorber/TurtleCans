@@ -161,14 +161,10 @@ int main(int argc, char** argv) {
         int defBlockSize = AES::BLOCKSIZE;
         SecByteBlock key(SHA256::DIGESTSIZE);
         SHA256().CalculateDigest(key, sharedA, sharedA.size());
-        byte iv1[AES::BLOCKSIZE];//={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-        //byte iv2[AES::BLOCKSIZE]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-        //rndA.GenerateBlock(iv, AES::BLOCKSIZE);
-        
+        byte iv1[AES::BLOCKSIZE];
 
         boost::asio::streambuf response2;
         boost::asio::read_until(s, response2, "\0");
-        std::cout<<"1b"<<std::endl;
         std::istream response_stream2(&response2);
         std::string answer2;
         std::getline(response_stream2, answer2);
@@ -180,23 +176,7 @@ int main(int argc, char** argv) {
         for(int i=0;i<16;i++){
             iv1[i]=iv1string[i];
         }
-        //std::cout<<(char*)iv1<<std::endl;
-        /*
-        boost::asio::streambuf response3;
-        std::cout<<"2a"<<std::endl;
-        boost::asio::read_until(s, response3, "\0");
-        std::cout<<"2b"<<std::endl;
-        std::istream response_stream3(&response3);
-        std::string answer3;
-        std::getline(response_stream3, answer3);
-        std::string iv2string;
-        StringSource ssiv2(answer3,true,new Base64Decoder(new StringSink(iv2string)));
-        if(iv2string.length()<16){
-            throw std::exception();
-        }
-        for(int i=0;i<16;i++){
-            iv2[i]=iv2string[i];
-            }*/
+        
         std::string ivdisp;
         StringSource(iv1, sizeof(iv1), true,
 		new HexEncoder(
