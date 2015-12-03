@@ -227,6 +227,14 @@ int main(int argc, char** argv) {
         std::getline(response_stream, answer);
         //std::cout << "\nBank dh pub: \n"<<answer << std::endl;
 
+        //Send an ack to the Bank
+        boost::asio::write(s, boost::asio::buffer("ack"),
+                                boost::asio::transfer_all(), EC);
+        if ((boost::asio::error::eof == EC) ||                           
+            (boost::asio::error::connection_reset == EC)) {
+            std::cerr << "ERROR" << std::endl;
+        }
+
         //Base 64 decode the Bank's Diffie-Hellman public key.
         std::string pubBstr;
         StringSource ss2(answer, true, new Base64Decoder(new StringSink(pubBstr)));

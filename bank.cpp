@@ -297,6 +297,9 @@ class Session : public std::enable_shared_from_this<Session> {
         std::string pubanswer;
         std::getline(pub_response_stream, pubanswer);
         //std::cout<<"\nchal:"<<pubanswer<<std::endl;
+        if (pubanswer.size() < 340) {
+            throw runtime_error("ERROR");
+        }
         
         std::string pubdec;
         StringSource pubrss(pubanswer, true, new Base64Decoder(new StringSink(pubdec)));
@@ -400,6 +403,13 @@ class Session : public std::enable_shared_from_this<Session> {
         SHA256().CalculateDigest(key, sharedB, sharedB.size());
         byte iv1[AES::BLOCKSIZE];
         rndB.GenerateBlock(iv1, AES::BLOCKSIZE);
+
+        //Capture the ack from the ATM
+        boost::asio::streambuf ack_response;
+        boost::asio::read_until(bank_socket_, ack_response, "\0");
+        std::istream ack_stream(&ack_response);
+        std::string ack;
+        std::getline(ack_stream, ack);
 
         std::string iv164, iv264;
         StringSource ssiv1(iv1,17,true,new Base64Encoder(new StringSink(iv164)));
