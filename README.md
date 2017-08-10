@@ -2,7 +2,7 @@
 
 Cans for turtles
 
-##Install Instructions
+## Install Instructions
 1. run "sudo ./setup_bank.sh"
 2. run "make rsa"
 3. run "make"
@@ -10,7 +10,7 @@ Cans for turtles
 5. startup the proxy e.g. "./proxy.out 8000 8001"
 6. connect the atm e.g. "./atm.out 8000"
 
-##Design
+## Design
 
 * Inspired by SSL/TLS
 * Begin with handshake between Bank and ATM - share public keys, make unique key 
@@ -20,7 +20,7 @@ to them to prevent replay
 * If any bad message detected, kill connection
 * Sign messages with hash to detect tampering
 
-###Protocol
+### Protocol
 1. ATM knows the Bank's RSA public key.
 2. ATM sends the Bank it's RSA public key in plain text.
 3. A randomly generated number is encrypted using the Bank's RSA public key and sent to the Bank.
@@ -34,5 +34,5 @@ to them to prevent replay
 11. The Bank receives the acknowledgment and sends its the initial value as plain text to the ATM.
 12. AES Cipher Feedback is used for all further communication with ATM to Bank communication using the first initial value and Bank to ATM communication using the second initial value.
 
-###Error Handling
+### Error Handling
 * When in doubt, kick the user out
